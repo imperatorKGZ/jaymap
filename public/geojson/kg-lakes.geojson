@@ -1,0 +1,15 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Ысык-Көл"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [77.25, 42.42]
+      }
+    }
+  ]
+}

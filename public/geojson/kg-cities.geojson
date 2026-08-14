@@ -1,0 +1,326 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Bishkek",
+        "name:ru": "Бишкек",
+        "name:ky": "Бишкек",
+        "population": 1074075,
+        "rank": 1,
+        "capital": true,
+        "region": "Bishkek",
+        "minzoom": 5
+      },
+      "geometry": { "type": "Point", "coordinates": [74.5698, 42.8746] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Osh",
+        "name:ru": "Ош",
+        "name:ky": "Ош",
+        "population": 322164,
+        "rank": 2,
+        "capital": false,
+        "region": "Osh City",
+        "minzoom": 5
+      },
+      "geometry": { "type": "Point", "coordinates": [72.8161, 40.5140] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Manas",
+        "name:ru": "Манас",
+        "name:ky": "Манас",
+        "population": 113900,
+        "rank": 3,
+        "capital": false,
+        "region": "Manas",
+        "minzoom": 5
+      },
+      "geometry": { "type": "Point", "coordinates": [73.0000, 40.9333] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Karakol",
+        "name:ru": "Каракол",
+        "name:ky": "Каракол",
+        "population": 84351,
+        "rank": 4,
+        "capital": false,
+        "region": "Issyk-Kul",
+        "minzoom": 5
+      },
+      "geometry": { "type": "Point", "coordinates": [78.3936, 42.4907] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Tokmok",
+        "name:ru": "Токмок",
+        "name:ky": "Токмок",
+        "population": 63200,
+        "rank": 5,
+        "capital": false,
+        "region": "Chuy",
+        "minzoom": 8
+      },
+      "geometry": { "type": "Point", "coordinates": [75.2945, 42.8419] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Uzgen",
+        "name:ru": "Узген",
+        "name:ky": "Өзгөн",
+        "population": 62800,
+        "rank": 6,
+        "capital": false,
+        "region": "Osh",
+        "minzoom": 8
+      },
+      "geometry": { "type": "Point", "coordinates": [73.3007, 40.7699] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Kyzyl-Kiya",
+        "name:ru": "Кызыл-Кыя",
+        "name:ky": "Кызыл-Кыя",
+        "population": 56819,
+        "rank": 7,
+        "capital": false,
+        "region": "Batken",
+        "minzoom": 8
+      },
+      "geometry": { "type": "Point", "coordinates": [72.1279, 40.2578] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Balykchy",
+        "name:ru": "Балыкчы",
+        "name:ky": "Балыкчы",
+        "population": 50814,
+        "rank": 8,
+        "capital": false,
+        "region": "Issyk-Kul",
+        "minzoom": 8
+      },
+      "geometry": { "type": "Point", "coordinates": [76.1871, 42.4602] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Kara-Balta",
+        "name:ru": "Кара-Балта",
+        "name:ky": "Кара-Балта",
+        "population": 48278,
+        "rank": 9,
+        "capital": false,
+        "region": "Chuy",
+        "minzoom": 8
+      },
+      "geometry": { "type": "Point", "coordinates": [73.8481, 42.8142] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Naryn",
+        "name:ru": "Нарын",
+        "name:ky": "Нарын",
+        "population": 41178,
+        "rank": 10,
+        "capital": false,
+        "region": "Naryn",
+        "minzoom": 5
+      },
+      "geometry": { "type": "Point", "coordinates": [75.9611, 41.4287] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Talas",
+        "name:ru": "Талас",
+        "name:ky": "Талас",
+        "population": 40308,
+        "rank": 11,
+        "capital": false,
+        "region": "Talas",
+        "minzoom": 5
+      },
+      "geometry": { "type": "Point", "coordinates": [72.2427, 42.5228] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Batken",
+        "name:ru": "Баткен",
+        "name:ky": "Баткен",
+        "population": 27730,
+        "rank": 12,
+        "capital": false,
+        "region": "Batken",
+        "minzoom": 5
+      },
+      "geometry": { "type": "Point", "coordinates": [70.8194, 40.0626] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Kara-Suu",
+        "name:ru": "Кара-Суу",
+        "name:ky": "Кара-Суу",
+        "population": 26609,
+        "rank": 13,
+        "capital": false,
+        "region": "Osh",
+        "minzoom": 8
+      },
+      "geometry": { "type": "Point", "coordinates": [72.8778, 40.7050] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Kant",
+        "name:ru": "Кант",
+        "name:ky": "Кант",
+        "population": 22617,
+        "rank": 14,
+        "capital": false,
+        "region": "Chuy",
+        "minzoom": 8
+      },
+      "geometry": { "type": "Point", "coordinates": [74.8508, 42.8911] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Mayluu-Suu",
+        "name:ru": "Майлуу-Суу",
+        "name:ky": "Майлуу-Суу",
+        "population": 22441,
+        "rank": 15,
+        "capital": false,
+        "region": "Jalal-Abad",
+        "minzoom": 9
+      },
+      "geometry": { "type": "Point", "coordinates": [72.4585, 41.2585] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Tash-Kumyr",
+        "name:ru": "Таш-Кумыр",
+        "name:ky": "Таш-Көмүр",
+        "population": 20600,
+        "rank": 16,
+        "capital": false,
+        "region": "Jalal-Abad",
+        "minzoom": 9
+      },
+      "geometry": { "type": "Point", "coordinates": [72.2167, 41.3500] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Kochkor-Ata",
+        "name:ru": "Кочкор-Ата",
+        "name:ky": "Кочкор-Ата",
+        "population": 17177,
+        "rank": 17,
+        "capital": false,
+        "region": "Jalal-Abad",
+        "minzoom": 9
+      },
+      "geometry": { "type": "Point", "coordinates": [72.4833, 41.0333] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Sulyukta",
+        "name:ru": "Сулюкта",
+        "name:ky": "Сүлүктү",
+        "population": 14770,
+        "rank": 18,
+        "capital": false,
+        "region": "Batken",
+        "minzoom": 9
+      },
+      "geometry": { "type": "Point", "coordinates": [69.5667, 39.9333] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Cholpon-Ata",
+        "name:ru": "Чолпон-Ата",
+        "name:ky": "Чолпон-Ата",
+        "population": 14237,
+        "rank": 19,
+        "capital": false,
+        "region": "Issyk-Kul",
+        "minzoom": 9
+      },
+      "geometry": { "type": "Point", "coordinates": [77.0855, 42.6481] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Isfana",
+        "name:ru": "Раззаков",
+        "name:ky": "Раззаков",
+        "population": 23000,
+        "rank": 20,
+        "capital": false,
+        "region": "Batken"
+      },
+      "geometry": { "type": "Point", "coordinates": [69.6000, 39.8333] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Kemin",
+        "name:ru": "Кемин",
+        "name:ky": "Кемин",
+        "population": 10354,
+        "rank": 21,
+        "capital": false,
+        "region": "Chuy",
+        "minzoom": 10
+      },
+      "geometry": { "type": "Point", "coordinates": [75.6961, 42.7844] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Nookat",
+        "name:ru": "Ноокат",
+        "name:ky": "Ноокат",
+        "population": 16125,
+        "rank": 22,
+        "capital": false,
+        "region": "Osh",
+        "minzoom": 9
+      },
+      "geometry": { "type": "Point", "coordinates": [72.6167, 40.2667] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Shopokov",
+        "name:ru": "Шопоков",
+        "name:ky": "Шопоков",
+        "population": 10200,
+        "rank": 23,
+        "capital": false,
+        "region": "Chuy",
+        "minzoom": 10
+      },
+      "geometry": { "type": "Point", "coordinates": [74.3333, 42.8667] }
+    }
+  ]
+}

@@ -1,0 +1,74 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# Large map/data files
+*.mbtiles
+*.osm.pbf
+*.jar
+*.zip
+*.gz
+
+# Python
+__pycache__/
+*.pyc
+
+# Build and dependencies
+node_modules/
+.next/
+
+# Large map data
+data/sources/
+data/*.mbtiles
+data/*.osm.pbf
+data/*.jar
+data/*.gz
+data/arhive/*.mbtiles
+data/arhive/__pycache__/
+
+# Archives
+*.zip
+
+# Python cache
+__pycache__/
+*.pyc
+components/map/MainMap 1.tsx
+app/page1.tsx

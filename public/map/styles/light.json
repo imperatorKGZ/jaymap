@@ -1,0 +1,1554 @@
+{
+  "version": 8,
+  "name": "MapKG Light",
+  "metadata": {
+    "mapkg:purpose": "Custom minimalist light map style for the MapKG long-term rental real-estate platform. A calm background layer for price markers, selected-listing highlight, clusters, filters, search, routes and search-area polygons drawn by the frontend — not a navigation or tourist map.",
+    "mapkg:schema": "OpenMapTiles (unmodified — as served by OpenFreeMap)",
+    "mapkg:tile_source": "https://tiles.openfreemap.org/planet — free public OpenFreeMap instance, no API key, no request limits, self-hostable (see https://github.com/hyperknot/openfreemap)",
+    "mapkg:fonts": "OpenFreeMap public glyph server, generated from openmaptiles/fonts. Verified available combos: 'Noto Sans Regular', 'Noto Sans Bold', 'Noto Sans Italic'. No 'Medium' weight exists on this server, so it is not used anywhere in this style.",
+    "mapkg:sprite": "Not used. No icon-image is referenced anywhere in this style (all POI/marker icons live in the frontend UI, not the basemap), so no sprite sheet is required.",
+    "mapkg:compatibility": "MapLibre GL JS, Style Specification v8. No Mapbox-only expressions or properties.",
+    "mapkg:bishkek_bbox_note": "The Bishkek downtown bbox used below (74.585,42.865 to 74.625,42.885) is a hand-picked rectangle covering the historic grid center; adjust or duplicate for other cities in docs/LAYERS.md."
+  },
+  "glyphs": "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
+  "sources": {
+    "openmaptiles": {
+      "type": "vector",
+      "url": "http://localhost:8080/data/kyrgyzstan.json"
+    }
+  },
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "metadata": {
+        "mapkg:group": "background"
+      },
+      "paint": {
+        
+        "background-color": "rgba(0,0,0,0)" 
+      }
+    },
+    {
+      "id": "landcover-wood",
+      "type": "fill",
+      "source": "openmaptiles",
+      "source-layer": "landcover",
+      "metadata": {
+        "mapkg:group": "parks"
+      },
+      "filter": [
+        "all",
+        [
+          "match",
+          [
+            "geometry-type"
+          ],
+          [
+            "Polygon",
+            "MultiPolygon"
+          ],
+          true,
+          false
+        ],
+        [
+          "==",
+          [
+            "get",
+            "class"
+          ],
+          "wood"
+        ]
+      ],
+      "minzoom": 4,
+      "paint": {
+        "fill-color": "#D4E8CE",
+        "fill-opacity": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          4,
+          0.5,
+          10,
+          0.85
+        ]
+      }
+    },
+    {
+      "id": "park",
+      "type": "fill",
+      "source": "openmaptiles",
+      "source-layer": "park",
+      "metadata": {
+        "mapkg:group": "parks"
+      },
+      "filter": [
+        "match",
+        [
+          "geometry-type"
+        ],
+        [
+          "Polygon",
+          "MultiPolygon"
+        ],
+        true,
+        false
+      ],
+      "minzoom": 4,
+      "paint": {
+        "fill-color": "#DCEFD8",
+        "fill-opacity": 0.9
+      }
+    },
+    {
+      "id": "landuse-residential",
+      "type": "fill",
+      "source": "openmaptiles",
+      "source-layer": "landuse",
+      "metadata": {
+        "mapkg:group": "districts",
+        "mapkg:note": "Residential quarters — the calmest of the three landuse tints."
+      },
+      "filter": [
+        "all",
+        [
+          "match",
+          [
+            "geometry-type"
+          ],
+          [
+            "Polygon",
+            "MultiPolygon"
+          ],
+          true,
+          false
+        ],
+        [
+          "==",
+          [
+            "get",
+            "class"
+          ],
+          "residential"
+        ]
+      ],
+      "minzoom": 8,
+      "paint": {
+        "fill-color": "#F5F5F5",
+        "fill-opacity": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          8,
+          0,
+          10,
+          0.6
+        ]
+      }
+    },
+    {
+      "id": "landuse-commercial",
+      "type": "fill",
+      "source": "openmaptiles",
+      "source-layer": "landuse",
+      "metadata": {
+        "mapkg:group": "districts",
+        "mapkg:note": "Commercial/retail quarters — a hair warmer than residential."
+      },
+      "filter": [
+        "all",
+        [
+          "match",
+          [
+            "geometry-type"
+          ],
+          [
+            "Polygon",
+            "MultiPolygon"
+          ],
+          true,
+          false
+        ],
+        [
+          "==",
+          [
+            "get",
+            "class"
+          ],
+          "commercial"
+        ]
+      ],
+      "minzoom": 9,
+      "paint": {
+        "fill-color": "#F2EFE9",
+        "fill-opacity": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          9,
+          0,
+          11,
+          0.6
+        ]
+      }
+    },
+    {
+      "id": "landuse-industrial",
+      "type": "fill",
+      "source": "openmaptiles",
+      "source-layer": "landuse",
+      "metadata": {
+        "mapkg:group": "districts",
+        "mapkg:note": "Industrial quarters — a hair cooler/greyer than residential."
+      },
+      "filter": [
+        "all",
+        [
+          "match",
+          [
+            "geometry-type"
+          ],
+          [
+            "Polygon",
+            "MultiPolygon"
+          ],
+          true,
+          false
+        ],
+        [
+          "==",
+          [
+            "get",
+            "class"
+          ],
+          "industrial"
+        ]
+      ],
+      "minzoom": 9,
+      "paint": {
+        "fill-color": "#EFEEEA",
+        "fill-opacity": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          9,
+          0,
+          11,
+          0.6
+        ]
+      }
+    },
+    {
+      "id": "water",
+      "type": "fill",
+      "source": "openmaptiles",
+      "source-layer": "water",
+      "metadata": {
+        "mapkg:group": "water"
+      },
+      "filter": [
+        "all",
+        [
+          "match",
+          [
+            "geometry-type"
+          ],
+          [
+            "Polygon",
+            "MultiPolygon"
+          ],
+          true,
+          false
+        ],
+        [
+          "!=",
+          [
+            "get",
+            "brunnel"
+          ],
+          "tunnel"
+        ]
+      ],
+      "minzoom": 0,
+      "paint": {
+        "fill-color": "#CFE6FF",
+        "fill-antialias": true
+      }
+    },
+    {
+      "id": "waterway",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "waterway",
+      "metadata": {
+        "mapkg:group": "water"
+      },
+      "filter": [
+        "all",
+        [
+          "match",
+          [
+            "geometry-type"
+          ],
+          [
+            "LineString",
+            "MultiLineString"
+          ],
+          true,
+          false
+        ],
+        [
+          "in",
+          [
+            "get",
+            "class"
+          ],
+          [
+            "literal",
+            [
+              "river",
+              "canal"
+            ]
+          ]
+        ]
+      ],
+      "minzoom": 6,
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#CFE6FF",
+        "line-width": [
+          "interpolate",
+          [
+            "exponential",
+            1.3
+          ],
+          [
+            "zoom"
+          ],
+          6,
+          0.5,
+          12,
+          1.5,
+          16,
+          3
+        ]
+      }
+    },
+    {
+      "id": "building",
+      "type": "fill",
+      "source": "openmaptiles",
+      "source-layer": "building",
+      "metadata": {
+        "mapkg:group": "buildings",
+        "mapkg:priority": 1,
+        "mapkg:note": "Most important layer. Single layer (fill + fill-outline-color) instead of two stacked layers, for performance. Bishkek downtown gets a lower-contrast outline via a 'case'/'within' expression instead of a duplicate layer, so the dense historic grid doesn't turn into visual noise."
+      },
+      "minzoom": 13,
+      "paint": {
+        "fill-color": "#E6E2DC",
+        "fill-opacity": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          13,
+          0.5,
+          15,
+          1
+        ],
+        "fill-outline-color": [
+          "case",
+          [
+            "within",
+            {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    74.585,
+                    42.865
+                  ],
+                  [
+                    74.625,
+                    42.865
+                  ],
+                  [
+                    74.625,
+                    42.885
+                  ],
+                  [
+                    74.585,
+                    42.885
+                  ],
+                  [
+                    74.585,
+                    42.865
+                  ]
+                ]
+              ]
+            }
+          ],
+          "#EDE9E2",
+          "#D8D4CD"
+        ]
+      }
+    },
+    {
+      "id": "tunnel-minor",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "transportation",
+      "metadata": {
+        "mapkg:group": "roads"
+      },
+      "filter": [
+        "all",
+        [
+          "match",
+          [
+            "geometry-type"
+          ],
+          [
+            "LineString",
+            "MultiLineString"
+          ],
+          true,
+          false
+        ],
+        [
+          "==",
+          [
+            "get",
+            "brunnel"
+          ],
+          "tunnel"
+        ],
+        [
+          "in",
+          [
+            "get",
+            "class"
+          ],
+          [
+            "literal",
+            [
+              "minor",
+              "service",
+              "track"
+            ]
+          ]
+        ]
+      ],
+      "minzoom": 13,
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#F5F3EF",
+        "line-width": [
+          "interpolate",
+          [
+            "exponential",
+            1.3
+          ],
+          [
+            "zoom"
+          ],
+          13,
+          0.4,
+          18,
+          3
+        ],
+        "line-dasharray": [
+          2,
+          1
+        ]
+      }
+    },
+    {
+      "id": "road-minor",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "transportation",
+      "metadata": {
+        "mapkg:group": "roads",
+        "mapkg:note": "Alleys / service streets — lightest, thinnest step."
+      },
+      "filter": [
+        "all",
+        [
+          "match",
+          [
+            "geometry-type"
+          ],
+          [
+            "LineString",
+            "MultiLineString"
+          ],
+          true,
+          false
+        ],
+        [
+          "!=",
+          [
+            "get",
+            "brunnel"
+          ],
+          "tunnel"
+        ],
+        [
+          "in",
+          [
+            "get",
+            "class"
+          ],
+          [
+            "literal",
+            [
+              "minor",
+              "service",
+              "track"
+            ]
+          ]
+        ]
+      ],
+      "minzoom": 14,
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#E3E0DB",
+        "line-width": [
+          "interpolate",
+          [
+            "exponential",
+            1.3
+          ],
+          [
+            "zoom"
+          ],
+          14,
+          0.25,
+          18,
+          2.4
+        ]
+      }
+    },
+    {
+      "id": "road-tertiary",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "transportation",
+      "metadata": {
+        "mapkg:group": "roads",
+        "mapkg:note": "Own step between minor and secondary, smoothing the hierarchy."
+      },
+      "filter": [
+        "all",
+        [
+          "match",
+          [
+            "geometry-type"
+          ],
+          [
+            "LineString",
+            "MultiLineString"
+          ],
+          true,
+          false
+        ],
+        [
+          "==",
+          [
+            "get",
+            "class"
+          ],
+          "tertiary"
+        ]
+      ],
+      "minzoom": 11,
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#DEDAD5",
+        "line-width": [
+          "interpolate",
+          [
+            "exponential",
+            1.3
+          ],
+          [
+            "zoom"
+          ],
+          11,
+          0.5,
+          14,
+          1.6,
+          18,
+          6
+        ]
+      }
+    },
+    {
+      "id": "road-secondary",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "transportation",
+      "metadata": {
+        "mapkg:group": "roads"
+      },
+      "filter": [
+        "all",
+        [
+          "match",
+          [
+            "geometry-type"
+          ],
+          [
+            "LineString",
+            "MultiLineString"
+          ],
+          true,
+          false
+        ],
+        [
+          "==",
+          [
+            "get",
+            "class"
+          ],
+          "secondary"
+        ]
+      ],
+      "minzoom": 10,
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#D8D4CF",
+        "line-width": [
+          "interpolate",
+          [
+            "exponential",
+            1.3
+          ],
+          [
+            "zoom"
+          ],
+          10,
+          0.6,
+          14,
+          2,
+          18,
+          8
+        ]
+      }
+    },
+    {
+      "id": "road-primary",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "transportation",
+      "metadata": {
+        "mapkg:group": "roads",
+        "mapkg:note": "Ordinary main streets — plain white. Avenues (trunk) below get their own warm palette, kept visually distinct."
+      },
+      "filter": [
+        "all",
+        [
+          "match",
+          [
+            "geometry-type"
+          ],
+          [
+            "LineString",
+            "MultiLineString"
+          ],
+          true,
+          false
+        ],
+        [
+          "==",
+          [
+            "get",
+            "class"
+          ],
+          "primary"
+        ]
+      ],
+      "minzoom": 8,
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#D1CCC6",
+        "line-width": [
+          "interpolate",
+          [
+            "exponential",
+            1.3
+          ],
+          [
+            "zoom"
+          ],
+          8,
+          0.8,
+          14,
+          3,
+          18,
+          12
+        ]
+      }
+    },
+    {
+      "id": "road-trunk",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "transportation",
+      "metadata": {
+        "mapkg:group": "roads",
+        "mapkg:note": "Avenues/проспекты — own warm-gold palette. Color shifts from a muted intercity tone at low zoom to a richer urban tone at high zoom, so the same road reads as a calm connector between cities and a defined avenue once inside town."
+      },
+      "filter": [
+        "all",
+        [
+          "match",
+          [
+            "geometry-type"
+          ],
+          [
+            "LineString",
+            "MultiLineString"
+          ],
+          true,
+          false
+        ],
+        [
+          "==",
+          [
+            "get",
+            "class"
+          ],
+          "trunk"
+        ]
+      ],
+      "minzoom": 6,
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          6,
+          "#E5DDD0",
+          10,
+          "#EADFCB",
+          14,
+          "#EFD7B0"
+        ],
+        "line-width": [
+          "interpolate",
+          [
+            "exponential",
+            1.3
+          ],
+          [
+            "zoom"
+          ],
+          6,
+          0.8,
+          12,
+          2.5,
+          18,
+          14
+        ]
+      }
+    },
+    {
+      "id": "road-motorway",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "transportation",
+      "metadata": {
+        "mapkg:group": "roads",
+        "mapkg:note": "Motorways — warmest, strongest tone in the hierarchy; same low-zoom/high-zoom shift as trunk, one notch stronger."
+      },
+      "filter": [
+        "all",
+        [
+          "match",
+          [
+            "geometry-type"
+          ],
+          [
+            "LineString",
+            "MultiLineString"
+          ],
+          true,
+          false
+        ],
+        [
+          "==",
+          [
+            "get",
+            "class"
+          ],
+          "motorway"
+        ]
+      ],
+      "minzoom": 6,
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          6,
+          "#F5EEE1",
+          10,
+          "#FFEBCB",
+          14,
+          "#FFDDA8"
+        ],
+        "line-width": [
+          "interpolate",
+          [
+            "exponential",
+            1.3
+          ],
+          [
+            "zoom"
+          ],
+          6,
+          1,
+          10,
+          2,
+          14,
+          5,
+          18,
+          16
+        ]
+      }
+    },
+    {
+      "id": "railway",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "transportation",
+      "metadata": {
+        "mapkg:group": "railway"
+      },
+      "filter": [
+        "all",
+        [
+          "match",
+          [
+            "geometry-type"
+          ],
+          [
+            "LineString",
+            "MultiLineString"
+          ],
+          true,
+          false
+        ],
+        [
+          "==",
+          [
+            "get",
+            "class"
+          ],
+          "rail"
+        ],
+        [
+          "!",
+          [
+            "has",
+            "service"
+          ]
+        ]
+      ],
+      "minzoom": 11,
+      "paint": {
+        "line-color": "#BDBDBD",
+        "line-width": [
+          "interpolate",
+          [
+            "exponential",
+            1.3
+          ],
+          [
+            "zoom"
+          ],
+          11,
+          0.4,
+          16,
+          1.2
+        ],
+        "line-dasharray": [
+          3,
+          2
+        ]
+      }
+    },
+    {
+      "id": "boundary-country",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "boundary",
+      "metadata": {
+        "mapkg:group": "boundaries",
+        "mapkg:note": "Only country + city admin levels kept; maritime, disputed and claimed_by borders excluded to avoid noisy contested lines on a rental map."
+      },
+      "filter": [
+        "all",
+        [
+          "<=",
+          [
+            "get",
+            "admin_level"
+          ],
+          2
+        ],
+        [
+          "!=",
+          [
+            "get",
+            "maritime"
+          ],
+          1
+        ],
+        [
+          "!=",
+          [
+            "get",
+            "disputed"
+          ],
+          1
+        ],
+        [
+          "!",
+          [
+            "has",
+            "claimed_by"
+          ]
+        ]
+      ],
+      "minzoom": 1,
+      "layout": {
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#D8D4CD",
+        "line-width": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          1,
+          0.4,
+          10,
+          1
+        ],
+        "line-dasharray": [
+          4,
+          2
+        ]
+      }
+    },
+    {
+      "id": "boundary-city",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "boundary",
+      "metadata": {
+        "mapkg:group": "boundaries"
+      },
+      "filter": [
+        "all",
+        [
+          ">",
+          [
+            "get",
+            "admin_level"
+          ],
+          2
+        ],
+        [
+          "<=",
+          [
+            "get",
+            "admin_level"
+          ],
+          6
+        ],
+        [
+          "!=",
+          [
+            "get",
+            "maritime"
+          ],
+          1
+        ],
+        [
+          "!=",
+          [
+            "get",
+            "disputed"
+          ],
+          1
+        ],
+        [
+          "!",
+          [
+            "has",
+            "claimed_by"
+          ]
+        ]
+      ],
+      "minzoom": 6,
+      "layout": {
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#D8D4CD",
+        "line-width": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          6,
+          0.3,
+          12,
+          0.8
+        ],
+        "line-dasharray": [
+          2,
+          2
+        ],
+        "line-opacity": 0.8
+      }
+    },
+    {
+      "id": "water-name",
+      "type": "symbol",
+      "source": "openmaptiles",
+      "source-layer": "water_name",
+      "metadata": {
+        "mapkg:group": "labels"
+      },
+      "minzoom": 8,
+      "layout": {
+        "text-field": [
+          "coalesce",
+          [
+            "get",
+            "name:ru"
+          ],
+          [
+            "get",
+            "name:ky"
+          ],
+          [
+            "get",
+            "name"
+          ]
+        ],
+        "text-font": [
+          "Noto Sans Italic"
+        ],
+        "text-size": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          8,
+          10,
+          14,
+          13
+        ],
+        "text-letter-spacing": 0.02,
+        "symbol-placement": "line"
+      },
+      "paint": {
+        "text-color": "#9FB9CF",
+        "text-halo-color": "#F8F8F6",
+        "text-halo-width": 1
+      }
+    },
+    {
+      "id": "place-city-capital",
+      "type": "symbol",
+      "source": "openmaptiles",
+      "source-layer": "place",
+      "metadata": {
+        "mapkg:group": "labels",
+        "mapkg:note": "National capital — largest, boldest, visible from the lowest zoom."
+      },
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "class"
+          ],
+          "city"
+        ],
+        [
+          "==",
+          [
+            "get",
+            "capital"
+          ],
+          2
+        ]
+      ],
+      "minzoom": 3,
+      "layout": {
+        "text-field": [
+          "coalesce",
+          [
+            "get",
+            "name:ru"
+          ],
+          [
+            "get",
+            "name:ky"
+          ],
+          [
+            "get",
+            "name"
+          ]
+        ],
+        "text-font": [
+          "Noto Sans Bold"
+        ],
+        "text-size": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          3,
+          13,
+          8,
+          17,
+          14,
+          20
+        ],
+        "text-letter-spacing": 0.01
+      },
+      "paint": {
+        "text-color": "#302F2D",
+        "text-halo-color": "#F8F8F6",
+        "text-halo-width": 1.3
+      }
+    },
+    {
+      "id": "place-city-major",
+      "type": "symbol",
+      "source": "openmaptiles",
+      "source-layer": "place",
+      "metadata": {
+        "mapkg:group": "labels",
+        "mapkg:note": "Other important cities/towns by rank, shown earlier than minor ones so the map isn't cluttered while zoomed out."
+      },
+      "filter": [
+        "all",
+        [
+          "in",
+          [
+            "get",
+            "class"
+          ],
+          [
+            "literal",
+            [
+              "city",
+              "town"
+            ]
+          ]
+        ],
+        [
+          "!=",
+          [
+            "get",
+            "capital"
+          ],
+          2
+        ],
+        [
+          "<=",
+          [
+            "get",
+            "rank"
+          ],
+          5
+        ]
+      ],
+      "minzoom": 5,
+      "layout": {
+        "text-field": [
+          "coalesce",
+          [
+            "get",
+            "name:ru"
+          ],
+          [
+            "get",
+            "name:ky"
+          ],
+          [
+            "get",
+            "name"
+          ]
+        ],
+        "text-font": [
+          "Noto Sans Regular"
+        ],
+        "text-size": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          5,
+          11,
+          8,
+          14,
+          14,
+          18
+        ]
+      },
+      "paint": {
+        "text-color": "#3A3A38",
+        "text-halo-color": "#F8F8F6",
+        "text-halo-width": 1.2
+      }
+    },
+    {
+      "id": "place-city-minor",
+      "type": "symbol",
+      "source": "openmaptiles",
+      "source-layer": "place",
+      "metadata": {
+        "mapkg:group": "labels",
+        "mapkg:note": "Ordinary towns — appear later. Villages/hamlets are excluded entirely (not just delayed), keeping the map calm."
+      },
+      "filter": [
+        "all",
+        [
+          "in",
+          [
+            "get",
+            "class"
+          ],
+          [
+            "literal",
+            [
+              "city",
+              "town"
+            ]
+          ]
+        ],
+        [
+          "!=",
+          [
+            "get",
+            "capital"
+          ],
+          2
+        ],
+        [
+          ">",
+          [
+            "get",
+            "rank"
+          ],
+          5
+        ]
+      ],
+      "minzoom": 8,
+      "layout": {
+        "text-field": [
+          "coalesce",
+          [
+            "get",
+            "name:ru"
+          ],
+          [
+            "get",
+            "name:ky"
+          ],
+          [
+            "get",
+            "name"
+          ]
+        ],
+        "text-font": [
+          "Noto Sans Regular"
+        ],
+        "text-size": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          8,
+          10,
+          13,
+          13
+        ]
+      },
+      "paint": {
+        "text-color": "#5A5A56",
+        "text-halo-color": "#F8F8F6",
+        "text-halo-width": 1.1
+      }
+    },
+    {
+      "id": "place-district",
+      "type": "symbol",
+      "source": "openmaptiles",
+      "source-layer": "place",
+      "metadata": {
+        "mapkg:group": "labels",
+        "mapkg:note": "Bishkek-specific rule: suppressed inside the downtown bbox, where the city label plus street names already carry enough orientation — extra district labels there only added clutter."
+      },
+      "filter": [
+        "all",
+        [
+          "in",
+          [
+            "get",
+            "class"
+          ],
+          [
+            "literal",
+            [
+              "suburb",
+              "quarter",
+              "neighbourhood"
+            ]
+          ]
+        ],
+        [
+          "!",
+          [
+            "within",
+            {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    74.585,
+                    42.865
+                  ],
+                  [
+                    74.625,
+                    42.865
+                  ],
+                  [
+                    74.625,
+                    42.885
+                  ],
+                  [
+                    74.585,
+                    42.885
+                  ],
+                  [
+                    74.585,
+                    42.865
+                  ]
+                ]
+              ]
+            }
+          ]
+        ]
+      ],
+      "minzoom": 10,
+      "layout": {
+        "text-field": [
+          "coalesce",
+          [
+            "get",
+            "name:ru"
+          ],
+          [
+            "get",
+            "name:ky"
+          ],
+          [
+            "get",
+            "name"
+          ]
+        ],
+        "text-font": [
+          "Noto Sans Italic"
+        ],
+        "text-size": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          10,
+          10,
+          15,
+          13
+        ],
+        "text-transform": "uppercase",
+        "text-letter-spacing": 0.06
+      },
+      "paint": {
+        "text-color": "#8A8783",
+        "text-halo-color": "#F8F8F6",
+        "text-halo-width": 1
+      }
+    },
+    {
+      "id": "road-label-major",
+      "type": "symbol",
+      "source": "openmaptiles",
+      "source-layer": "transportation_name",
+      "metadata": {
+        "mapkg:group": "labels",
+        "mapkg:note": "Only major streets/avenues are named; minor/service streets stay unlabeled. Bold for avenues/motorways, Regular for ordinary named streets."
+      },
+      "filter": [
+        
+        "all",
+        [
+          "match",
+          ["geometry-type"],
+          ["LineString", "MultiLineString"],
+          true,
+          false
+        ],
+        [
+          "in",
+          ["get", "class"],
+          [
+            "literal",
+            [
+              "motorway",
+              "trunk",
+              "primary",
+              "secondary",
+              "tertiary"
+            ]
+          ]
+        ],
+        [
+          "!",
+          [
+            "has",
+            "route_1_network"
+          ]
+        ]
+      ],
+      "minzoom": 7,
+      "layout": {
+        "symbol-placement": "line",
+        "text-field": [
+          "coalesce",
+          [
+            "get",
+            "name:ru"
+          ],
+          [
+            "get",
+            "name:ky"
+          ],
+          [
+            "get",
+            "name"
+          ]
+        ],
+        "text-font": [
+          "Noto Sans Regular"
+        ],
+        "text-size": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          12,
+          10,
+          16,
+          12.5
+        ],
+        "text-letter-spacing": 0.015
+      },
+      "paint": {
+        "text-color": "#6B6862",
+        "text-halo-color": "#FFFFFF",
+        "text-halo-width": 1.2
+      }
+    }
+  ]
+}

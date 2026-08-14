@@ -1,0 +1,109 @@
+@import "tailwindcss";
+
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+
+    background-image: url("/textures/topo-bg.svg");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
+
+body {
+  color: #ffffff;
+  font-family: Inter, Arial, sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+.glass {
+  position: relative;
+
+  background: rgba(20, 24, 30, 0.28);
+
+  backdrop-filter: blur(26px) saturate(180%);
+  -webkit-backdrop-filter: blur(26px) saturate(180%);
+
+  border: 1px solid rgba(255,255,255,.14);
+
+  box-shadow:
+      0 10px 40px rgba(0,0,0,.15),
+      inset 0 1px 0 rgba(255,255,255,.14);
+
+  overflow: hidden;
+
+  isolation: isolate;
+}
+.glass::before{
+    content:"";
+    position:absolute;
+    inset:1px;
+    border-radius:inherit;
+
+    background:linear-gradient(
+        to bottom,
+        rgba(255,255,255,.16),
+        rgba(255,255,255,0)
+    );
+
+    pointer-events:none;
+}
+.glass::before{
+  content:"";
+  position:absolute;
+  inset:0;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255,255,255,.18) 0%,
+      rgba(255,255,255,.04) 40%,
+      rgba(255,255,255,0) 100%
+    );
+
+  pointer-events:none;
+}
+
+.glass::after{
+  content:"";
+  position:absolute;
+  inset:0;
+
+  background:
+    radial-gradient(
+      circle at top,
+      rgba(255,255,255,.14),
+      transparent 60%
+    );
+
+  mix-blend-mode:screen;
+
+  pointer-events:none;
+}

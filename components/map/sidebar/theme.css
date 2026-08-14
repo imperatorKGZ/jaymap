@@ -1,0 +1,106 @@
+/* ============================================================
+   JayMap Sidebar — Theme Tokens
+   Меняйте только эти переменные, чтобы полностью
+   перекрасить Sidebar (Light / Dark / Custom).
+   Компоненты никогда не содержат хардкод-цветов —
+   только var(--sb-*).
+   ============================================================ */
+
+:root,
+[data-sidebar-theme="dark"] {
+  --sb-bg: rgba(17, 18, 20, 0.55);
+  --sb-bg-solid: rgba(20, 20, 22, 0.92);
+  --sb-border: rgba(255, 255, 255, 0.08);
+  --sb-blur: 24px;
+
+  --sb-text: #d6d3cc;
+  --sb-text-strong: #f5f3ee;
+  --sb-text-muted: rgba(214, 211, 204, 0.55);
+
+  --sb-icon-idle: rgba(255, 255, 255, 0.55);
+  --sb-icon-hover: #ffffff;
+  --sb-icon-active: #0f1d1c;
+
+  --sb-accent: #6fc9c2;
+  --sb-accent-soft: rgba(111, 201, 194, 0.14);
+  --sb-accent-strong: rgba(111, 201, 194, 0.9);
+
+  --sb-hover-bg: rgba(255, 255, 255, 0.06);
+  --sb-active-bg: rgba(111, 201, 194, 0.12);
+
+  --sb-cta: #059669;
+  --sb-cta-hover: #047857;
+  --sb-cta-text: #ffffff;
+
+  --sb-divider: rgba(255, 255, 255, 0.08);
+  --sb-radius-panel: 28px;
+  --sb-radius-control: 14px;
+  --sb-shadow: 0 24px 70px -20px rgba(0, 0, 0, 0.55);
+
+  --sb-track-bg: rgba(255, 255, 255, 0.08);
+  --sb-track-fill: var(--sb-accent);
+
+  color-scheme: dark;
+}
+
+[data-sidebar-theme="light"] {
+  --sb-bg: rgba(255, 255, 255, 0.6);
+  --sb-bg-solid: rgba(255, 255, 255, 0.96);
+  --sb-border: rgba(15, 23, 21, 0.08);
+  --sb-blur: 24px;
+
+  --sb-text: #3f3d38;
+  --sb-text-strong: #161512;
+  --sb-text-muted: rgba(63, 61, 56, 0.55);
+
+  --sb-icon-idle: rgba(15, 23, 21, 0.45);
+  --sb-icon-hover: #0f1712;
+  --sb-icon-active: #0f1d1c;
+
+  --sb-accent: #1f9e93;
+  --sb-accent-soft: rgba(31, 158, 147, 0.12);
+  --sb-accent-strong: rgba(31, 158, 147, 0.9);
+
+  --sb-hover-bg: rgba(15, 23, 21, 0.05);
+  --sb-active-bg: rgba(31, 158, 147, 0.1);
+
+  --sb-cta: #059669;
+  --sb-cta-hover: #047857;
+  --sb-cta-text: #ffffff;
+
+  --sb-divider: rgba(15, 23, 21, 0.08);
+  --sb-radius-panel: 28px;
+  --sb-radius-control: 14px;
+  --sb-shadow: 0 24px 60px -24px rgba(15, 23, 21, 0.35);
+
+  --sb-track-bg: rgba(15, 23, 21, 0.08);
+  --sb-track-fill: var(--sb-accent);
+
+  color-scheme: light;
+}
+
+/* Пример кастомной темы под будущий ребрендинг — просто
+   переопределите переменные, ни один компонент менять не нужно. */
+[data-sidebar-theme="custom"] {
+  --sb-bg: rgba(24, 20, 30, 0.6);
+  --sb-border: rgba(255, 255, 255, 0.1);
+  --sb-text: #ece7f5;
+  --sb-text-strong: #ffffff;
+  --sb-accent: #b892ff;
+  --sb-accent-soft: rgba(184, 146, 255, 0.16);
+  --sb-active-bg: rgba(184, 146, 255, 0.14);
+  --sb-cta: #7c3aed;
+  --sb-cta-hover: #6d28d9;
+}
+
+/* Скроллбар только рабочей области */
+.sb-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.sb-scroll::-webkit-scrollbar-thumb {
+  background: var(--sb-border);
+  border-radius: 999px;
+}
+.sb-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}

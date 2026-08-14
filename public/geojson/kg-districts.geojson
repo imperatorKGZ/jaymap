@@ -1,0 +1,204 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "id": "alamudun", "name": "Alamudun District", "name:ru": "Аламудунский район", "name:ky": "Аламүдүн району", "region_id": "chuy" },
+      "geometry": { "type": "Polygon", "coordinates": [[[74.55, 42.60], [74.75, 42.60], [74.75, 43.00], [74.55, 43.00], [74.55, 42.60]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "sokuluk", "name": "Sokuluk District", "name:ru": "Сокулукский район", "name:ky": "Сокулук району", "region_id": "chuy" },
+      "geometry": { "type": "Polygon", "coordinates": [[[73.95, 42.60], [74.55, 42.60], [74.55, 43.05], [73.95, 43.05], [73.95, 42.60]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "ysyk-ata", "name": "Ysyk-Ata District", "name:ru": "Ысык-Атинский район", "name:ky": "Ысык-Ата району", "region_id": "chuy" },
+      "geometry": { "type": "Polygon", "coordinates": [[[74.75, 42.60], [75.20, 42.60], [75.20, 43.00], [74.75, 43.00], [74.75, 42.60]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "zhaiyl", "name": "Zhaiyl District", "name:ru": "Жайылский район", "name:ky": "Жайыл району", "region_id": "chuy" },
+      "geometry": { "type": "Polygon", "coordinates": [[[73.50, 42.50], [73.95, 42.50], [73.95, 42.95], [73.50, 42.95], [73.50, 42.50]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "moskva", "name": "Moskva District", "name:ru": "Московский район", "name:ky": "Москва району", "region_id": "chuy" },
+      "geometry": { "type": "Polygon", "coordinates": [[[73.80, 42.65], [74.15, 42.65], [74.15, 43.05], [73.80, 43.05], [73.80, 42.65]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "panfilov", "name": "Panfilov District", "name:ru": "Панфиловский район", "name:ky": "Панфилов району", "region_id": "chuy" },
+      "geometry": { "type": "Polygon", "coordinates": [[[73.30, 42.65], [73.70, 42.65], [73.70, 43.05], [73.30, 43.05], [73.30, 42.65]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "kemin", "name": "Kemin District", "name:ru": "Кеминский район", "name:ky": "Кемин району", "region_id": "chuy" },
+      "geometry": { "type": "Polygon", "coordinates": [[[75.50, 42.60], [76.10, 42.60], [76.10, 42.95], [75.50, 42.95], [75.50, 42.60]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "chuy-district", "name": "Chuy District", "name:ru": "Чуйский район", "name:ky": "Чүй району", "region_id": "chuy" },
+      "geometry": { "type": "Polygon", "coordinates": [[[75.10, 42.60], [75.50, 42.60], [75.50, 42.90], [75.10, 42.90], [75.10, 42.60]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "issyk-kul-district", "name": "Issyk-Kul District", "name:ru": "Иссык-Кульский район", "name:ky": "Ысык-Көл району", "region_id": "issyk-kul" },
+      "geometry": { "type": "Polygon", "coordinates": [[[76.20, 42.50], [77.50, 42.50], [77.50, 42.95], [76.20, 42.95], [76.20, 42.50]]] }
+    },
+    {
+      "type": "Feature", "properties": { "id": "tyup", "name": "Tyup District", "name:ru": "Тюпский район", "name:ky": "Түп району", "region_id": "issyk-kul" },
+      "geometry": { "type": "Polygon", "coordinates": [[[78.00, 42.60], [79.20, 42.60], [79.20, 42.95], [78.00, 42.95], [78.00, 42.60]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "ak-suu", "name": "Ak-Suu District", "name:ru": "Ак-Суйский район", "name:ky": "Ак-Суу району", "region_id": "issyk-kul" },
+      "geometry": { "type": "Polygon", "coordinates": [[[78.50, 41.80], [80.20, 41.80], [80.20, 42.60], [78.50, 42.60], [78.50, 41.80]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "jety-oguz", "name": "Jety-Oguz District", "name:ru": "Джети-Огузский район", "name:ky": "Жети-Өгүз району", "region_id": "issyk-kul" },
+      "geometry": { "type": "Polygon", "coordinates": [[[77.20, 41.40], [78.50, 41.40], [78.50, 42.30], [77.20, 42.30], [77.20, 41.40]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "tong", "name": "Tong District", "name:ru": "Тонский район", "name:ky": "Тон району", "region_id": "issyk-kul" },
+      "geometry": { "type": "Polygon", "coordinates": [[[76.00, 41.90], [77.40, 41.90], [77.40, 42.40], [76.00, 42.40], [76.00, 41.90]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "naryn-district", "name": "Naryn District", "name:ru": "Нарынский район", "name:ky": "Нарын району", "region_id": "naryn" },
+      "geometry": { "type": "Polygon", "coordinates": [[[75.50, 41.00], [76.80, 41.00], [76.80, 41.80], [75.50, 41.80], [75.50, 41.00]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "at-bashi", "name": "At-Bashi District", "name:ru": "Ат-Башинский район", "name:ky": "Ат-Башы району", "region_id": "naryn" },
+      "geometry": { "type": "Polygon", "coordinates": [[[74.80, 40.20], [76.50, 40.20], [76.50, 41.20], [74.80, 41.20], [74.80, 40.20]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "ak-talaa", "name": "Ak-Talaa District", "name:ru": "Ак-Талинский район", "name:ky": "Ак-Талаа району", "region_id": "naryn" },
+      "geometry": { "type": "Polygon", "coordinates": [[[74.00, 41.00], [75.30, 41.00], [75.30, 41.60], [74.00, 41.60], [74.00, 41.00]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "zhumgal", "name": "Zhumgal District", "name:ru": "Жумгалский район", "name:ky": "Жумгал району", "region_id": "naryn" },
+      "geometry": { "type": "Polygon", "coordinates": [[[74.00, 41.60], [75.30, 41.60], [75.30, 42.20], [74.00, 42.20], [74.00, 41.60]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "kochkor", "name": "Kochkor District", "name:ru": "Кочкорский район", "name:ky": "Кочкор району", "region_id": "naryn" },
+      "geometry": { "type": "Polygon", "coordinates": [[[75.20, 41.80], [76.20, 41.80], [76.20, 42.40], [75.20, 42.40], [75.20, 41.80]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "talas-district", "name": "Talas District", "name:ru": "Таласский район", "name:ky": "Талас району", "region_id": "talas" },
+      "geometry": { "type": "Polygon", "coordinates": [[[72.30, 42.20], [73.50, 42.20], [73.50, 42.80], [72.30, 42.80], [72.30, 42.20]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "bakai-ata", "name": "Bakai-Ata District", "name:ru": "Бакай-Атинский район", "name:ky": "Бакай-Ата району", "region_id": "talas" },
+      "geometry": { "type": "Polygon", "coordinates": [[[71.60, 42.20], [72.40, 42.20], [72.40, 42.70], [71.60, 42.70], [71.60, 42.20]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "kara-buura", "name": "Kara-Buura District", "name:ru": "Кара-Бууринский район", "name:ky": "Кара-Буура району", "region_id": "talas" },
+      "geometry": { "type": "Polygon", "coordinates": [[[71.00, 42.10], [71.70, 42.10], [71.70, 42.70], [71.00, 42.70], [71.00, 42.10]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "manas", "name": "Manas District", "name:ru": "Манасский район", "name:ky": "Манас району", "region_id": "talas" },
+      "geometry": { "type": "Polygon", "coordinates": [[[71.20, 42.50], [72.10, 42.50], [72.10, 42.90], [71.20, 42.90], [71.20, 42.50]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "suzak", "name": "Suzak District", "name:ru": "Сузакский район", "name:ky": "Сузак району", "region_id": "jalal-abad" },
+      "geometry": { "type": "Polygon", "coordinates": [[[72.80, 40.80], [73.50, 40.80], [73.50, 41.30], [72.80, 41.30], [72.80, 40.80]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "bazar-korgon", "name": "Bazar-Korgon District", "name:ru": "Базар-Коргонский район", "name:ky": "Базар-Коргон району", "region_id": "jalal-abad" },
+      "geometry": { "type": "Polygon", "coordinates": [[[72.60, 41.00], [73.10, 41.00], [73.10, 41.60], [72.60, 41.60], [72.60, 41.00]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "nooken", "name": "Nooken District", "name:ru": "Ноокенский район", "name:ky": "Ноокен району", "region_id": "jalal-abad" },
+      "geometry": { "type": "Polygon", "coordinates": [[[72.20, 40.90], [72.70, 40.90], [72.70, 41.30], [72.20, 41.30], [72.20, 40.90]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "aksy", "name": "Aksy District", "name:ru": "Аксыйский район", "name:ky": "Аксы району", "region_id": "jalal-abad" },
+      "geometry": { "type": "Polygon", "coordinates": [[[71.50, 41.30], [72.30, 41.30], [72.30, 41.90], [71.50, 41.90], [71.50, 41.30]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "ala-buka", "name": "Ala-Buka District", "name:ru": "Ала-Букинский район", "name:ky": "Ала-Бука району", "region_id": "jalal-abad" },
+      "geometry": { "type": "Polygon", "coordinates": [[[71.00, 41.20], [71.70, 41.20], [71.70, 41.70], [71.00, 41.70], [71.00, 41.20]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "chatkal", "name": "Chatkal District", "name:ru": "Чаткальский район", "name:ky": "Чаткал району", "region_id": "jalal-abad" },
+      "geometry": { "type": "Polygon", "coordinates": [[[70.50, 41.40], [71.50, 41.40], [71.50, 42.10], [70.50, 42.10], [70.50, 41.40]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "toktogul", "name": "Toktogul District", "name:ru": "Токтогульский район", "name:ky": "Токтогул району", "region_id": "jalal-abad" },
+      "geometry": { "type": "Polygon", "coordinates": [[[72.20, 41.50], [73.50, 41.50], [73.50, 42.20], [72.20, 42.20], [72.20, 41.50]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "toguz-toro", "name": "Toguz-Toro District", "name:ru": "Тогуз-Тороуский район", "name:ky": "Тогуз-Торо району", "region_id": "jalal-abad" },
+      "geometry": { "type": "Polygon", "coordinates": [[[73.50, 41.20], [74.30, 41.20], [74.30, 41.80], [73.50, 41.80], [73.50, 41.20]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "kara-suu-district", "name": "Kara-Suu District", "name:ru": "Кара-Сууский район", "name:ky": "Кара-Суу району", "region_id": "osh" },
+      "geometry": { "type": "Polygon", "coordinates": [[[72.60, 40.40], [73.30, 40.40], [73.30, 40.90], [72.60, 40.90], [72.60, 40.40]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "nookat", "name": "Nookat District", "name:ru": "Ноокатский район", "name:ky": "Ноокат району", "region_id": "osh" },
+      "geometry": { "type": "Polygon", "coordinates": [[[72.20, 39.90], [72.90, 39.90], [72.90, 40.40], [72.20, 40.40], [72.20, 39.90]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "uzgen-district", "name": "Uzgen District", "name:ru": "Узгенский район", "name:ky": "Өзгөн району", "region_id": "osh" },
+      "geometry": { "type": "Polygon", "coordinates": [[[73.10, 40.60], [74.10, 40.60], [74.10, 41.10], [73.10, 41.10], [73.10, 40.60]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "aravan", "name": "Aravan District", "name:ru": "Араванский район", "name:ky": "Араван району", "region_id": "osh" },
+      "geometry": { "type": "Polygon", "coordinates": [[[72.30, 40.30], [72.60, 40.30], [72.60, 40.60], [72.30, 40.60], [72.30, 40.30]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "alay", "name": "Alay District", "name:ru": "Алайский район", "name:ky": "Алай району", "region_id": "osh" },
+      "geometry": { "type": "Polygon", "coordinates": [[[72.80, 39.40], [74.00, 39.40], [74.00, 40.20], [72.80, 40.20], [72.80, 39.40]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "chon-alay", "name": "Chong-Alay District", "name:ru": "Чон-Алайский район", "name:ky": "Чоң-Алай району", "region_id": "osh" },
+      "geometry": { "type": "Polygon", "coordinates": [[[71.50, 39.30], [72.80, 39.30], [72.80, 39.80], [71.50, 39.80], [71.50, 39.30]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "kara-kulja", "name": "Kara-Kulja District", "name:ru": "Кара-Кулджинский район", "name:ky": "Кара-Кулжа району", "region_id": "osh" },
+      "geometry": { "type": "Polygon", "coordinates": [[[73.50, 40.10], [74.50, 40.10], [74.50, 40.70], [73.50, 40.70], [73.50, 40.10]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "batken-district", "name": "Batken District", "name:ru": "Баткенский район", "name:ky": "Баткен району", "region_id": "batken" },
+      "geometry": { "type": "Polygon", "coordinates": [[[70.50, 39.70], [71.30, 39.70], [71.30, 40.30], [70.50, 40.30], [70.50, 39.70]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "kadamjay", "name": "Kadamjay District", "name:ru": "Кадамжайский район", "name:ky": "Кадамжай району", "region_id": "batken" },
+      "geometry": { "type": "Polygon", "coordinates": [[[71.20, 39.70], [72.30, 39.70], [72.30, 40.40], [71.20, 40.40], [71.20, 39.70]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "leilek", "name": "Leilek District", "name:ru": "Лейлекский район", "name:ky": "Лейлек району", "region_id": "batken" },
+      "geometry": { "type": "Polygon", "coordinates": [[[69.25, 39.60], [70.50, 39.60], [70.50, 40.20], [69.25, 40.20], [69.25, 39.60]]] }
+    }
+  ]
+}
