@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
+
 import "./globals.css";
+
 import { LanguageProvider } from "@/lib/i18n";
+import { AuthProvider } from "@/lib/auth/AuthProvider";
 
 export const metadata: Metadata = {
   title: "MapKG",
@@ -15,7 +18,11 @@ export default function RootLayout({
   return (
     <html lang="ru">
       <body>
-        <LanguageProvider>{children}</LanguageProvider>
+        <LanguageProvider>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        </LanguageProvider>
       </body>
     </html>
   );
