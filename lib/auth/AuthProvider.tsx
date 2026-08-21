@@ -15,14 +15,21 @@ import type {
 } from "@supabase/supabase-js";
 
 import { supabase } from "@/lib/supabase/client";
+import type { Database } from "@/lib/supabase/database.types";
+
+type Profile =
+  Database["public"]["Tables"]["profiles"]["Row"];
 
 interface AuthContextValue {
   user: User | null;
   session: Session | null;
+  profile: Profile | null;
   loading: boolean;
+  profileLoading: boolean;
 
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext =
@@ -30,6 +37,30 @@ const AuthContext =
 
 interface AuthProviderProps {
   children: ReactNode;
+}
+
+async function fetchProfile(
+  userId: string
+): Promise<Profile | null> {
+  const {
+    data,
+    error,
+  } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error(
+      "[Auth] profile fetch error:",
+      error
+    );
+
+    return null;
+  }
+
+  return data;
 }
 
 export function AuthProvider({
@@ -41,8 +72,37 @@ export function AuthProvider({
   const [session, setSession] =
     useState<Session | null>(null);
 
+  const [profile, setProfile] =
+    useState<Profile | null>(null);
+
   const [loading, setLoading] =
     useState(true);
+
+  const [profileLoading, setProfileLoading] =
+    useState(false);
+
+  const refreshProfile =
+    async () => {
+      if (!user) {
+        setProfile(null);
+        return;
+      }
+
+      setProfileLoading(true);
+
+      try {
+        const nextProfile =
+          await fetchProfile(
+            user.id
+          );
+
+        setProfile(
+          nextProfile
+        );
+      } finally {
+        setProfileLoading(false);
+      }
+    };
 
   useEffect(() => {
     let mounted = true;
@@ -52,7 +112,8 @@ export function AuthProvider({
         const {
           data,
           error,
-        } = await supabase.auth.getSession();
+        } =
+          await supabase.auth.getSession();
 
         if (!mounted) {
           return;
@@ -66,15 +127,47 @@ export function AuthProvider({
 
           setSession(null);
           setUser(null);
+          setProfile(null);
         } else {
+          const nextSession =
+            data.session ?? null;
+
+          const nextUser =
+            nextSession?.user ??
+            null;
+
           setSession(
-            data.session ?? null
+            nextSession
           );
 
           setUser(
-            data.session?.user ??
-              null
+            nextUser
           );
+
+          if (nextUser) {
+            setProfileLoading(
+              true
+            );
+
+            const nextProfile =
+              await fetchProfile(
+                nextUser.id
+              );
+
+            if (mounted) {
+              setProfile(
+                nextProfile
+              );
+
+              setProfileLoading(
+                false
+              );
+            }
+          } else {
+            setProfile(
+              null
+            );
+          }
         }
 
         setLoading(false);
@@ -86,18 +179,59 @@ export function AuthProvider({
       data: listener,
     } =
       supabase.auth.onAuthStateChange(
-        (_event, nextSession) => {
+        async (
+          _event,
+          nextSession
+        ) => {
           if (!mounted) {
             return;
           }
+
+          const nextUser =
+            nextSession?.user ??
+            null;
 
           setSession(
             nextSession ?? null
           );
 
           setUser(
-            nextSession?.user ??
+            nextUser
+          );
+
+          if (!nextUser) {
+            setProfile(
               null
+            );
+
+            setProfileLoading(
+              false
+            );
+
+            setLoading(false);
+
+            return;
+          }
+
+          setProfileLoading(
+            true
+          );
+
+          const nextProfile =
+            await fetchProfile(
+              nextUser.id
+            );
+
+          if (!mounted) {
+            return;
+          }
+
+          setProfile(
+            nextProfile
+          );
+
+          setProfileLoading(
+            false
           );
 
           setLoading(false);
@@ -106,6 +240,7 @@ export function AuthProvider({
 
     return () => {
       mounted = false;
+
       listener.subscription.unsubscribe();
     };
   }, []);
@@ -150,6 +285,10 @@ export function AuthProvider({
 
         throw error;
       }
+
+      setUser(null);
+      setSession(null);
+      setProfile(null);
     };
 
   const value =
@@ -157,14 +296,19 @@ export function AuthProvider({
       () => ({
         user,
         session,
+        profile,
         loading,
+        profileLoading,
         signInWithGoogle,
         signOut,
+        refreshProfile,
       }),
       [
         user,
         session,
+        profile,
         loading,
+        profileLoading,
       ]
     );
 

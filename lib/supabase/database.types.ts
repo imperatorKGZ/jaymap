@@ -1,17 +1,7 @@
 /**
  * lib/supabase/database.types.ts
- * ------------------------------------------------------------
- * ЗАГЛУШКА — замените на сгенерированные типы.
  *
- * Генерация:
- *   npx supabase gen types typescript \
- *     --project-id YOUR_PROJECT_ID \
- *     --schema public > lib/supabase/database.types.ts
- *
- * Или через Supabase CLI:
- *   supabase login
- *   supabase gen types typescript --linked > lib/supabase/database.types.ts
- * ------------------------------------------------------------
+ * Типы текущей публичной схемы JayMap.
  */
 
 export type Json =
@@ -19,80 +9,318 @@ export type Json =
   | number
   | boolean
   | null
-  | { [key: string]: Json | undefined }
+  | {
+      [key: string]: Json | undefined;
+    }
   | Json[];
 
 export interface Database {
   public: {
     Tables: {
+      profiles: {
+        Row: {
+          id: string;
+          display_name: string | null;
+          avatar_url: string | null;
+
+          contact_phone: string | null;
+          contact_email: string | null;
+
+          bio: string | null;
+
+          role:
+            | "user"
+            | "realtor"
+            | "admin";
+
+          verification_status:
+            | "unverified"
+            | "pending"
+            | "verified"
+            | "rejected";
+
+          onboarding_completed: boolean;
+
+          created_at: string;
+          updated_at: string;
+        };
+
+        Insert: {
+          id: string;
+          display_name?: string | null;
+          avatar_url?: string | null;
+
+          contact_phone?: string | null;
+          contact_email?: string | null;
+
+          bio?: string | null;
+
+          role?:
+            | "user"
+            | "realtor"
+            | "admin";
+
+          verification_status?:
+            | "unverified"
+            | "pending"
+            | "verified"
+            | "rejected";
+
+          onboarding_completed?: boolean;
+
+          created_at?: string;
+          updated_at?: string;
+        };
+
+        Update: {
+          id?: string;
+          display_name?: string | null;
+          avatar_url?: string | null;
+
+          contact_phone?: string | null;
+          contact_email?: string | null;
+
+          bio?: string | null;
+
+          role?:
+            | "user"
+            | "realtor"
+            | "admin";
+
+          verification_status?:
+            | "unverified"
+            | "pending"
+            | "verified"
+            | "rejected";
+
+          onboarding_completed?: boolean;
+
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+
       listings: {
         Row: {
           id: string;
           created_at: string;
           updated_at: string;
-          type: "rental" | "commercial" | "land" | "daily";
+
+          type:
+            | "rental"
+            | "commercial"
+            | "land"
+            | "daily";
+
           price: number;
           currency: string;
+
           rooms: number | null;
           area: number | null;
           floor: number | null;
           total_floors: number | null;
+
           furnished: boolean;
           parking: boolean;
           pets: boolean;
+
           purpose: string | null;
+
           city_id: string | null;
           district: string | null;
           address: string | null;
-          coordinates: unknown; // geography(point)
+
+          coordinates: unknown;
+
           title: string;
           description: string | null;
+
           phone: string | null;
           telegram: string | null;
           whatsapp: string | null;
+
           photos: string[];
+
           user_id: string | null;
+
           is_active: boolean;
           is_premium: boolean;
+
           params: Json;
+
           search_vector: unknown | null;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["listings"]["Row"],
-          "id" | "created_at" | "updated_at" | "search_vector"
-        > & {
+
+        Insert: {
           id?: string;
           created_at?: string;
           updated_at?: string;
+
+          type:
+            | "rental"
+            | "commercial"
+            | "land"
+            | "daily";
+
+          price: number;
+          currency?: string;
+
+          rooms?: number | null;
+          area?: number | null;
+          floor?: number | null;
+          total_floors?: number | null;
+
+          furnished?: boolean;
+          parking?: boolean;
+          pets?: boolean;
+
+          purpose?: string | null;
+
+          city_id?: string | null;
+          district?: string | null;
+          address?: string | null;
+
+          coordinates: unknown;
+
+          title: string;
+          description?: string | null;
+
+          phone?: string | null;
+          telegram?: string | null;
+          whatsapp?: string | null;
+
+          photos?: string[];
+
+          user_id?: string | null;
+
+          is_active?: boolean;
+          is_premium?: boolean;
+
+          params?: Json;
         };
-        Update: Partial<Database["public"]["Tables"]["listings"]["Insert"]>;
+
+        Update: {
+          id?: string;
+          created_at?: string;
+          updated_at?: string;
+
+          type?:
+            | "rental"
+            | "commercial"
+            | "land"
+            | "daily";
+
+          price?: number;
+          currency?: string;
+
+          rooms?: number | null;
+          area?: number | null;
+          floor?: number | null;
+          total_floors?: number | null;
+
+          furnished?: boolean;
+          parking?: boolean;
+          pets?: boolean;
+
+          purpose?: string | null;
+
+          city_id?: string | null;
+          district?: string | null;
+          address?: string | null;
+
+          coordinates?: unknown;
+
+          title?: string;
+          description?: string | null;
+
+          phone?: string | null;
+          telegram?: string | null;
+          whatsapp?: string | null;
+
+          photos?: string[];
+
+          user_id?: string | null;
+
+          is_active?: boolean;
+          is_premium?: boolean;
+
+          params?: Json;
+        };
       };
+
       cities: {
         Row: {
           id: string;
           name: string;
+
           name_ru: string | null;
           name_ky: string | null;
+
           coordinates: unknown;
+
           population: number | null;
           rank: number | null;
           region: string | null;
           min_zoom: number | null;
         };
-        Insert: Database["public"]["Tables"]["cities"]["Row"];
-        Update: Partial<Database["public"]["Tables"]["cities"]["Row"]>;
+
+        Insert: {
+          id: string;
+          name: string;
+
+          name_ru?: string | null;
+          name_ky?: string | null;
+
+          coordinates: unknown;
+
+          population?: number | null;
+          rank?: number | null;
+          region?: string | null;
+          min_zoom?: number | null;
+        };
+
+        Update: {
+          id?: string;
+          name?: string;
+
+          name_ru?: string | null;
+          name_ky?: string | null;
+
+          coordinates?: unknown;
+
+          population?: number | null;
+          rank?: number | null;
+          region?: string | null;
+          min_zoom?: number | null;
+        };
       };
+
       favorites: {
         Row: {
           user_id: string;
           listing_id: string;
           created_at: string;
         };
-        Insert: Database["public"]["Tables"]["favorites"]["Row"];
-        Update: Partial<Database["public"]["Tables"]["favorites"]["Row"]>;
+
+        Insert: {
+          user_id: string;
+          listing_id: string;
+          created_at?: string;
+        };
+
+        Update: {
+          user_id?: string;
+          listing_id?: string;
+          created_at?: string;
+        };
       };
     };
-    Views: Record<string, never>;
+
+    Views: Record<
+      string,
+      never
+    >;
+
     Functions: {
       get_listings_geojson: {
         Args: {
@@ -100,22 +328,37 @@ export interface Database {
           p_south?: number;
           p_east?: number;
           p_north?: number;
+
           p_type?: string;
           p_city_id?: string;
+
           p_price_min?: number;
           p_price_max?: number;
+
           p_rooms?: number;
+
           p_area_min?: number;
           p_area_max?: number;
+
           p_furnished?: boolean;
           p_parking?: boolean;
           p_pets?: boolean;
+
           p_params?: Json;
         };
+
         Returns: Json;
       };
     };
-    Enums: Record<string, never>;
-    CompositeTypes: Record<string, never>;
+
+    Enums: Record<
+      string,
+      never
+    >;
+
+    CompositeTypes: Record<
+      string,
+      never
+    >;
   };
 }
