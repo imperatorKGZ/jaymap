@@ -1,13 +1,11 @@
 /**
  * lib/supabase/api.ts
  * ------------------------------------------------------------
- * Типобезопасный API-слой. Все запросы к Supabase — здесь.
- * Компоненты не импортируют supabase напрямую, только функции отсюда.
+ * Типобезопасный API-слой.
  *
- * Принципы:
- *   - Canonical ListingsFilter находится в lib/filters/types.ts
- *   - GeoJSON для карты — через RPC
- *   - Bounds обязательны непосредственно перед запросом карты
+ * Все запросы к Supabase — здесь.
+ * Компоненты не импортируют supabase напрямую,
+ * кроме специализированных auth/profile компонентов.
  * ------------------------------------------------------------
  */
 
@@ -26,20 +24,18 @@ type ListingInsert =
   Database["public"]["Tables"]["listings"]["Insert"];
 
 /**
- * API-level filter.
+ * Фильтр уровня API.
  *
- * Sidebar/page работают с `ListingsFilter`, где bounds optional.
- * Для запроса GeoJSON bounds уже обязателен.
+ * Sidebar/page работают с ListingsFilter,
+ * но для запроса карты bounds обязательны.
  */
-export type ListingQueryFilter = ListingsFilter & {
-  bounds: MapBounds;
-};
+export type ListingQueryFilter =
+  ListingsFilter & {
+    bounds: MapBounds;
+  };
 
 /**
  * Backward-compatible export.
- *
- * Если где-то в проекте уже импортируется MapBounds из api.ts,
- * существующий код не должен ломаться.
  */
 export type { MapBounds };
 
@@ -48,11 +44,13 @@ export type { MapBounds };
    ============================================================ */
 
 /**
- * Получает GeoJSON объявлений для MapLibre.
+ * Получает публичный GeoJSON объявлений.
  *
- * На этом этапе RPC остаётся со старой сигнатурой.
- * Новые фильтры (floor, propertyType, purpose и т.д.) подключим
- * следующим этапом одновременно с изменением SQL/RPC.
+ * ВАЖНО:
+ * RPC не возвращает phone / telegram / whatsapp.
+ *
+ * Контакты загружаются отдельно через
+ * getListingContacts() только для authenticated.
  */
 export async function fetchListingsGeoJSON(
   filters: ListingQueryFilter
@@ -72,7 +70,10 @@ export async function fetchListingsGeoJSON(
     params,
   } = filters;
 
-  const { data, error } = await supabase.rpc(
+  const {
+    data,
+    error,
+  } = await supabase.rpc(
     "get_listings_geojson",
     {
       p_west: bounds.west,
@@ -80,8 +81,11 @@ export async function fetchListingsGeoJSON(
       p_east: bounds.east,
       p_north: bounds.north,
 
-      p_type: type ?? null,
-      p_city_id: cityId ?? null,
+      p_type:
+        type ?? null,
+
+      p_city_id:
+        cityId ?? null,
 
       p_price_min:
         priceMin ?? null,
@@ -135,7 +139,9 @@ export async function fetchListingsGeoJSON(
 
 /**
  * Создаёт объявление.
- * Координаты конвертируются в WKT для PostGIS.
+ *
+ * RLS дополнительно проверяет:
+ * auth.uid() = user_id
  */
 export async function createListing(
   data: Omit<
@@ -178,7 +184,87 @@ export async function createListing(
 }
 
 /**
- * Получает одно объявление по ID.
+ * Получает публичные данные объявления.
+ *
+ * Контакты намеренно НЕ возвращаются.
+ */
+export async function getPublicListing(
+  id: string
+) {
+  const {
+    data,
+    error,
+  } = await supabase.rpc(
+    "get_public_listing",
+    {
+      p_listing_id: id,
+    }
+  );
+
+  if (error) {
+    console.error(
+      "[API] getPublicListing error:",
+      error
+    );
+
+    throw error;
+  }
+
+  return data;
+}
+
+/**
+ * Получает контакты объявления.
+ *
+ * RPC разрешён только authenticated.
+ *
+ * Возвращает:
+ * - phone
+ * - telegram
+ * - whatsapp
+ */
+export async function getListingContacts(
+  listingId: string
+): Promise<{
+  phone: string | null;
+  telegram: string | null;
+  whatsapp: string | null;
+} | null> {
+  const {
+    data,
+    error,
+  } = await supabase.rpc(
+    "get_listing_contacts",
+    {
+      p_listing_id:
+        listingId,
+    }
+  );
+
+  if (error) {
+    console.error(
+      "[API] getListingContacts error:",
+      error
+    );
+
+    throw error;
+  }
+
+  return data as {
+    phone: string | null;
+    telegram: string | null;
+    whatsapp: string | null;
+  } | null;
+}
+
+/**
+ * Получает одно объявление напрямую.
+ *
+ * Этот метод оставляем для существующего
+ * внутреннего кода/совместимости.
+ *
+ * Публичный frontend для контактов должен
+ * использовать getPublicListing + getListingContacts.
  */
 export async function getListingById(
   id: string
@@ -206,7 +292,8 @@ export async function getListingById(
 
 /**
  * Обновляет объявление.
- * RLS должен самостоятельно проверить права пользователя.
+ *
+ * RLS проверяет владельца.
  */
 export async function updateListing(
   id: string,
@@ -235,11 +322,95 @@ export async function updateListing(
 }
 
 /* ============================================================
+   Мои объявления
+   ============================================================ */
+
+/**
+ * Получает объявления только текущего пользователя.
+ *
+ * Фильтрация выполняется одновременно:
+ *
+ * 1. auth.uid() на клиенте;
+ * 2. user_id = текущий user;
+ * 3. RLS в БД.
+ */
+export async function getMyListings() {
+  const {
+    data: {
+      user,
+    },
+  } =
+    await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error(
+      "Unauthorized"
+    );
+  }
+
+  const {
+    data,
+    error,
+  } =
+    await supabase
+      .from("listings")
+      .select(
+        `
+          id,
+          created_at,
+          updated_at,
+          type,
+          price,
+          currency,
+          rooms,
+          area,
+          floor,
+          total_floors,
+          furnished,
+          parking,
+          pets,
+          purpose,
+          city_id,
+          district,
+          address,
+          title,
+          description,
+          photos,
+          is_active,
+          is_premium,
+          params
+        `
+      )
+      .eq(
+        "user_id",
+        user.id
+      )
+      .order(
+        "created_at",
+        {
+          ascending: false,
+        }
+      );
+
+  if (error) {
+    console.error(
+      "[API] getMyListings error:",
+      error
+    );
+
+    throw error;
+  }
+
+  return data ?? [];
+}
+
+/* ============================================================
    Избранное
    ============================================================ */
 
 /**
- * Добавляет/удаляет объявление из избранного.
+ * Добавляет/удаляет объявление
+ * из избранного.
  *
  * true  = добавлено
  * false = удалено
@@ -251,29 +422,46 @@ export async function toggleFavorite(
     data: {
       user,
     },
-  } = await supabase.auth.getUser();
+  } =
+    await supabase.auth.getUser();
 
   if (!user) {
-    throw new Error("Unauthorized");
+    throw new Error(
+      "Unauthorized"
+    );
   }
 
   const {
     data: existing,
-  } = await supabase
-    .from("favorites")
-    .select("*")
-    .eq("listing_id", listingId)
-    .eq("user_id", user.id)
-    .maybeSingle();
+  } =
+    await supabase
+      .from("favorites")
+      .select("*")
+      .eq(
+        "listing_id",
+        listingId
+      )
+      .eq(
+        "user_id",
+        user.id
+      )
+      .maybeSingle();
 
   if (existing) {
     const {
       error,
-    } = await supabase
-      .from("favorites")
-      .delete()
-      .eq("listing_id", listingId)
-      .eq("user_id", user.id);
+    } =
+      await supabase
+        .from("favorites")
+        .delete()
+        .eq(
+          "listing_id",
+          listingId
+        )
+        .eq(
+          "user_id",
+          user.id
+        );
 
     if (error) {
       console.error(
@@ -289,12 +477,15 @@ export async function toggleFavorite(
 
   const {
     error,
-  } = await supabase
-    .from("favorites")
-    .insert({
-      listing_id: listingId,
-      user_id: user.id,
-    });
+  } =
+    await supabase
+      .from("favorites")
+      .insert({
+        listing_id:
+          listingId,
+        user_id:
+          user.id,
+      });
 
   if (error) {
     console.error(
@@ -319,7 +510,8 @@ export async function getFavoriteIds(): Promise<
     data: {
       user,
     },
-  } = await supabase.auth.getUser();
+  } =
+    await supabase.auth.getUser();
 
   if (!user) {
     return [];
@@ -328,10 +520,16 @@ export async function getFavoriteIds(): Promise<
   const {
     data,
     error,
-  } = await supabase
-    .from("favorites")
-    .select("listing_id")
-    .eq("user_id", user.id);
+  } =
+    await supabase
+      .from("favorites")
+      .select(
+        "listing_id"
+      )
+      .eq(
+        "user_id",
+        user.id
+      );
 
   if (error) {
     console.error(
@@ -353,13 +551,9 @@ export async function getFavoriteIds(): Promise<
 /**
  * Получает GeoJSON избранных объявлений.
  *
- * ВАЖНО:
- * Текущая серверная RPC ещё не умеет фильтровать
- * favorites + viewport одновременно.
- *
- * Поэтому эту функцию пока сохраняем как есть,
- * а server-side favorites будут подключены отдельным
- * этапом после расширения RPC.
+ * Временно используется существующий RPC.
+ * Позже можно сделать отдельный server-side RPC
+ * для favorites + viewport.
  */
 export async function getFavoritesGeoJSON(): Promise<
   GeoJSON.FeatureCollection
@@ -368,7 +562,8 @@ export async function getFavoritesGeoJSON(): Promise<
     data: {
       user,
     },
-  } = await supabase.auth.getUser();
+  } =
+    await supabase.auth.getUser();
 
   if (!user) {
     return {
@@ -380,32 +575,39 @@ export async function getFavoritesGeoJSON(): Promise<
   const {
     data,
     error,
-  } = await supabase.rpc(
-    "get_listings_geojson",
-    {
-      p_west: -180,
-      p_south: -90,
-      p_east: 180,
-      p_north: 90,
+  } =
+    await supabase.rpc(
+      "get_listings_geojson",
+      {
+        p_west: -180,
+        p_south: -90,
+        p_east: 180,
+        p_north: 90,
 
-      p_type: null,
-      p_city_id: null,
+        p_type: null,
+        p_city_id: null,
 
-      p_price_min: null,
-      p_price_max: null,
+        p_price_min: null,
+        p_price_max: null,
 
-      p_rooms: null,
+        p_rooms: null,
 
-      p_area_min: null,
-      p_area_max: null,
+        p_area_min: null,
+        p_area_max: null,
 
-      p_furnished: null,
-      p_parking: null,
-      p_pets: null,
+        p_furnished:
+          null,
 
-      p_params: null,
-    }
-  );
+        p_parking:
+          null,
+
+        p_pets:
+          null,
+
+        p_params:
+          null,
+      }
+    );
 
   if (error) {
     console.error(
@@ -443,9 +645,12 @@ export async function getFavoritesGeoJSON(): Promise<
               | null;
 
           return (
-            props?.id != null &&
+            props?.id !=
+              null &&
             favoriteIds.includes(
-              String(props.id)
+              String(
+                props.id
+              )
             )
           );
         }
@@ -454,15 +659,15 @@ export async function getFavoritesGeoJSON(): Promise<
 }
 
 /* ============================================================
-   Фото — Supabase Storage
+   Фото объявлений
    ============================================================ */
 
 const PHOTO_BUCKET =
   "listing-photos";
 
 /**
- * Загружает фото в Storage
- * и возвращает публичный URL.
+ * Загружает фото объявления
+ * в Storage.
  */
 export async function uploadListingPhoto(
   file: File,
@@ -472,25 +677,31 @@ export async function uploadListingPhoto(
     file.name
       .split(".")
       .pop()
-      ?.toLowerCase() ?? "jpg";
+      ?.toLowerCase() ??
+    "jpg";
 
   const fileName =
     `${listingId}/${crypto.randomUUID()}.${fileExt}`;
 
   const {
     error,
-  } = await supabase.storage
-    .from(PHOTO_BUCKET)
-    .upload(
-      fileName,
-      file,
-      {
-        cacheControl: "3600",
-        upsert: false,
-        contentType:
-          file.type,
-      }
-    );
+  } =
+    await supabase.storage
+      .from(
+        PHOTO_BUCKET
+      )
+      .upload(
+        fileName,
+        file,
+        {
+          cacheControl:
+            "3600",
+          upsert:
+            false,
+          contentType:
+            file.type,
+        }
+      );
 
   if (error) {
     console.error(
@@ -503,35 +714,52 @@ export async function uploadListingPhoto(
 
   const {
     data,
-  } = supabase.storage
-    .from(PHOTO_BUCKET)
-    .getPublicUrl(fileName);
+  } =
+    supabase.storage
+      .from(
+        PHOTO_BUCKET
+      )
+      .getPublicUrl(
+        fileName
+      );
 
   return data.publicUrl;
 }
 
 /**
- * Удаляет фото из Storage.
+ * Удаляет фото объявления.
  */
 export async function deleteListingPhoto(
   url: string
 ) {
   const baseUrl =
     supabase.storage
-      .from(PHOTO_BUCKET)
+      .from(
+        PHOTO_BUCKET
+      )
       .getPublicUrl("")
       .data
       .publicUrl;
 
-  const path = url
-    .replace(baseUrl, "")
-    .replace(/^\//, "");
+  const path =
+    url
+      .replace(
+        baseUrl,
+        ""
+      )
+      .replace(
+        /^\//,
+        ""
+      );
 
   const {
     error,
-  } = await supabase.storage
-    .from(PHOTO_BUCKET)
-    .remove([path]);
+  } =
+    await supabase.storage
+      .from(
+        PHOTO_BUCKET
+      )
+      .remove([path]);
 
   if (error) {
     console.error(
@@ -553,7 +781,8 @@ export async function getCurrentUser() {
       user,
     },
     error,
-  } = await supabase.auth.getUser();
+  } =
+    await supabase.auth.getUser();
 
   if (error) {
     return null;
@@ -576,9 +805,13 @@ export function onAuthStateChange(
     data,
   } =
     supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (
+        _event,
+        session
+      ) => {
         callback(
-          session?.user ?? null
+          session?.user ??
+            null
         );
       }
     );

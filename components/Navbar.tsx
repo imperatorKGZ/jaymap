@@ -69,7 +69,9 @@ export default function Navbar({
 
   const {
     user,
+    profile,
     loading: authLoading,
+    profileLoading,
     signOut,
   } = useAuth();
 
@@ -312,19 +314,20 @@ export default function Navbar({
     "";
 
   const userName =
+    profile?.display_name?.trim() ||
     user?.user_metadata
-      ?.full_name ??
+      ?.full_name ||
     user?.user_metadata
-      ?.name ??
-    userEmail
-      .split("@")[0] ??
+      ?.name ||
+    userEmail.split("@")[0] ||
     "Профиль";
 
   const userAvatar =
+    profile?.avatar_url ||
     user?.user_metadata
-      ?.avatar_url ??
+      ?.avatar_url ||
     user?.user_metadata
-      ?.picture ??
+      ?.picture ||
     null;
 
   return (
@@ -500,7 +503,7 @@ export default function Navbar({
             ].join(" ")}
           >
             <div className="flex items-center gap-1 mr-3">
-              {authLoading ? (
+              {authLoading || profileLoading ? (
                 <div className="h-9 w-24 animate-pulse rounded-full bg-white/10" />
               ) : user ? (
                 <div className="flex items-center gap-2">

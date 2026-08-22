@@ -346,7 +346,21 @@ export interface Database {
 
           p_params?: Json;
         };
+      get_public_listing: {
+        Args: {
+          p_listing_id: string;
+        };
 
+        Returns: Json;
+      };
+
+      get_listing_contacts: {
+        Args: {
+          p_listing_id: string;
+        };
+
+        Returns: Json;
+      };
         Returns: Json;
       };
     };
