@@ -57,9 +57,9 @@ type PersistListingInput = {
 
   cityId: string;
 
-  cityName: string;
+  cityName?: string;
 
-  cityNameRu: string;
+  cityNameRu?: string;
 
   district: string;
 
@@ -97,83 +97,34 @@ function buildParams(
 }
 
 /**
- * В UI города приходят из GeoJSON.
+ * Пытаемся определить реальный id города,
+ * но НЕ делаем это обязательным условием
+ * для создания объявления.
  *
- * Их id = props.name.
- *
- * Но listings.city_id должен ссылаться
- * на реальный public.cities.id.
- *
- * Поэтому сначала разрешаем UI-city
- * в DB-city.
+ * Если cities пустая / город отсутствует,
+ * возвращаем null и объявление всё равно
+ * будет создано.
  */
 async function resolveDatabaseCityId(
   input: PersistListingInput
-): Promise<string> {
-  /*
-   * 1. Сначала пробуем английское имя.
-   */
-  if (input.cityName) {
-    const {
-      data,
-      error,
-    } =
-      await supabase
-        .from("cities")
-        .select("id")
-        .eq(
-          "name",
-          input.cityName
-        )
-        .maybeSingle();
+): Promise<string | null> {
+  const cityId =
+    input.cityId?.trim();
 
-    if (error) {
-      throw new Error(
-        `Не удалось найти город в базе: ${error.message}`
-      );
-    }
+  const cityName =
+    input.cityName?.trim();
 
-    if (data?.id) {
-      return data.id;
-    }
+  const cityNameRu =
+    input.cityNameRu?.trim();
+
+  if (!cityId) {
+    return null;
   }
 
   /*
-   * 2. Потом русское название.
+   * 1. cityId как прямой id.
    */
-  if (input.cityNameRu) {
-    const {
-      data,
-      error,
-    } =
-      await supabase
-        .from("cities")
-        .select("id")
-        .eq(
-          "name_ru",
-          input.cityNameRu
-        )
-        .maybeSingle();
-
-    if (error) {
-      throw new Error(
-        `Не удалось найти город в базе: ${error.message}`
-      );
-    }
-
-    if (data?.id) {
-      return data.id;
-    }
-  }
-
-  /*
-   * 3. Если по названию не нашли,
-   * пробуем старый cityId.
-   *
-   * Это позволит работать и в случае,
-   * если GeoJSON id уже совпадает с DB id.
-   */
-  if (input.cityId) {
+  {
     const {
       data,
       error,
@@ -183,28 +134,124 @@ async function resolveDatabaseCityId(
         .select("id")
         .eq(
           "id",
-          input.cityId
+          cityId
         )
         .maybeSingle();
 
-    if (error) {
-      throw new Error(
-        `Не удалось проверить город: ${error.message}`
-      );
-    }
-
-    if (data?.id) {
+    if (!error && data?.id) {
       return data.id;
     }
   }
 
-  throw new Error(
-    `Город «${
-      input.cityNameRu ||
-      input.cityName ||
-      input.cityId
-    }» не найден в таблице cities.`
+  /*
+   * 2. cityId как английское имя.
+   */
+  {
+    const {
+      data,
+      error,
+    } =
+      await supabase
+        .from("cities")
+        .select("id")
+        .eq(
+          "name",
+          cityId
+        )
+        .maybeSingle();
+
+    if (!error && data?.id) {
+      return data.id;
+    }
+  }
+
+  /*
+   * 3. cityId как русское имя.
+   */
+  {
+    const {
+      data,
+      error,
+    } =
+      await supabase
+        .from("cities")
+        .select("id")
+        .eq(
+          "name_ru",
+          cityId
+        )
+        .maybeSingle();
+
+    if (!error && data?.id) {
+      return data.id;
+    }
+  }
+
+  /*
+   * 4. Дополнительный fallback:
+   *    явное английское имя.
+   */
+  if (cityName) {
+    const {
+      data,
+      error,
+    } =
+      await supabase
+        .from("cities")
+        .select("id")
+        .eq(
+          "name",
+          cityName
+        )
+        .maybeSingle();
+
+    if (!error && data?.id) {
+      return data.id;
+    }
+  }
+
+  /*
+   * 5. Дополнительный fallback:
+   *    русское имя.
+   */
+  if (cityNameRu) {
+    const {
+      data,
+      error,
+    } =
+      await supabase
+        .from("cities")
+        .select("id")
+        .eq(
+          "name_ru",
+          cityNameRu
+        )
+        .maybeSingle();
+
+    if (!error && data?.id) {
+      return data.id;
+    }
+  }
+
+  /*
+   * Город не найден.
+   *
+   * ВАЖНО:
+   * не бросаем exception.
+   *
+   * Публикация объявления не должна
+   * зависеть от справочника cities.
+   */
+  console.warn(
+    "[ListingPersistence] City not found, creating listing without city_id:",
+    {
+      cityId,
+      cityName,
+      cityNameRu,
+    }
   );
+
+  return null;
 }
 
 async function uploadPhoto(
@@ -235,24 +282,25 @@ async function uploadPhoto(
 
   const {
     error,
-  } = await supabase.storage
-    .from(
-      PHOTO_BUCKET
-    )
-    .upload(
-      path,
-      file,
-      {
-        cacheControl:
-          "31536000",
+  } =
+    await supabase.storage
+      .from(
+        PHOTO_BUCKET
+      )
+      .upload(
+        path,
+        file,
+        {
+          cacheControl:
+            "31536000",
 
-        upsert:
-          false,
+          upsert:
+            false,
 
-        contentType:
-          file.type,
-      }
-    );
+          contentType:
+            file.type,
+        }
+      );
 
   if (error) {
     throw new Error(
@@ -408,19 +456,29 @@ export async function persistListing(
   }
 
   /*
-   * Получаем настоящий DB id города.
+   * Пытаемся получить city_id,
+   * но НЕ блокируем публикацию,
+   * если город отсутствует.
    */
+  const databaseCityId =
+    await resolveDatabaseCityId(
+      input
+    );
 
   const [
     lng,
     lat,
-  ] = input.coordinates;
+  ] =
+    input.coordinates;
 
   /*
-   * Создаём объявление как draft/inactive.
+   * Формируем payload.
+   *
+   * city_id добавляем только если
+   * реально нашли город.
    */
-  const created =
-    await createListing({
+  const listingPayload: ListingInsert =
+    {
       type:
         input.selectedType,
 
@@ -460,7 +518,6 @@ export async function persistListing(
 
       purpose:
         input.purpose,
-
 
       district:
         input.district ||
@@ -502,7 +559,30 @@ export async function persistListing(
       lng,
 
       lat,
-    } as any);
+    };
+
+  /*
+   * Добавляем city_id только когда
+   * он действительно существует.
+   */
+  if (
+    databaseCityId
+  ) {
+    (
+      listingPayload as ListingInsert & {
+        city_id?: string | null;
+      }
+    ).city_id =
+      databaseCityId;
+  }
+
+  /*
+   * Создаём объявление.
+   */
+  const created =
+    await createListing(
+      listingPayload as any
+    );
 
   const uploaded: Array<{
     url: string;
@@ -539,7 +619,7 @@ export async function persistListing(
 
     /*
      * Сохраняем URL фотографий
-     * в том же порядке.
+     * и lifecycle.
      */
     await updateListingLifecycle(
       created.id,
@@ -566,8 +646,7 @@ export async function persistListing(
   ) {
     /*
      * Если upload/update упал —
-     * удаляем уже загруженные файлы
-     * и сам listing.
+     * чистим storage и listing.
      */
     await cleanupUploadedPhotos(
       uploaded.map(
