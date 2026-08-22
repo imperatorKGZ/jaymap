@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useRef, useState } from "react";
 
 import maplibregl, {
   type Map,
@@ -13,41 +9,24 @@ import maplibregl, {
 
 import "maplibre-gl/dist/maplibre-gl.css";
 
+import { setupMapLayers } from "../map/mapLayers";
+
 export interface LocationResult {
-  coordinates: [
-    number,
-    number
-  ];
-
+  coordinates: [number, number];
   address: string;
-
   district: string;
 }
 
 interface LocationPickerProps {
   open: boolean;
-
   cityName: string;
-
-  cityCoordinates:
-    | [number, number]
-    | null;
-
-  initialPosition:
-    | [number, number]
-    | null;
-
+  cityCoordinates: [number, number] | null;
+  initialPosition: [number, number] | null;
   onClose: () => void;
-
-  onConfirm: (
-    result: LocationResult
-  ) => void;
+  onConfirm: (result: LocationResult) => void;
 }
 
-const DEFAULT_CENTER: [
-  number,
-  number
-] = [
+const DEFAULT_CENTER: [number, number] = [
   74.6122,
   42.8746,
 ];
@@ -61,10 +40,9 @@ async function reverseGeocode(
   address: string;
   district: string;
 }> {
-  const url =
-    new URL(
-      "https://nominatim.openstreetmap.org/reverse"
-    );
+  const url = new URL(
+    "https://nominatim.openstreetmap.org/reverse"
+  );
 
   url.searchParams.set(
     "lat",
@@ -123,8 +101,7 @@ async function reverseGeocode(
     "";
 
   const houseNumber =
-    address.house_number ??
-    "";
+    address.house_number ?? "";
 
   const district =
     address.suburb ??
@@ -150,8 +127,7 @@ async function reverseGeocode(
       street;
   } else {
     normalizedAddress =
-      data.display_name ??
-      "";
+      data.display_name ?? "";
   }
 
   return {
@@ -160,6 +136,32 @@ async function reverseGeocode(
 
     district,
   };
+}
+
+function createMarker(
+  map: Map,
+  coordinates: [number, number]
+): Marker {
+  const marker =
+    new maplibregl.Marker({
+      color: "#6FC9C2",
+      anchor: "bottom",
+    })
+      .setLngLat(
+        coordinates
+      )
+      .addTo(map);
+
+  const element =
+    marker.getElement();
+
+  element.style.zIndex =
+    "20";
+
+  element.style.pointerEvents =
+    "auto";
+
+  return marker;
 }
 
 export default function LocationPicker({
@@ -185,49 +187,45 @@ export default function LocationPicker({
       null
     );
 
-  const [
-    position,
-    setPosition,
-  ] =
+  const resizeObserverRef =
+    useRef<ResizeObserver | null>(
+      null
+    );
+
+  const [position, setPosition] =
     useState<
       [number, number] | null
     >(null);
 
-  const [
-    address,
-    setAddress,
-  ] = useState("");
+  const [address, setAddress] =
+    useState("");
 
-  const [
-    district,
-    setDistrict,
-  ] = useState("");
+  const [district, setDistrict] =
+    useState("");
 
-  const [
-    geocoding,
-    setGeocoding,
-  ] = useState(false);
+  const [geocoding, setGeocoding] =
+    useState(false);
 
-  const [
-    error,
-    setError,
-  ] =
+  const [error, setError] =
     useState<string | null>(
       null
     );
+
+  const [mapError, setMapError] =
+    useState<string | null>(
+      null
+    );
+
+  const [mapReady, setMapReady] =
+    useState(false);
 
   const targetCenter =
     cityCoordinates ??
     DEFAULT_CENTER;
 
   /*
-   * При открытии:
-   *
-   * есть сохранённый pin
-   * → показываем его
-   *
-   * нет pin
-   * → центр города
+   * Сбрасываем состояние
+   * при открытии picker.
    */
   useEffect(() => {
     if (!open) {
@@ -235,7 +233,13 @@ export default function LocationPicker({
     }
 
     setError(null);
+
+    setMapError(null);
+
+    setMapReady(false);
+
     setAddress("");
+
     setDistrict("");
 
     setPosition(
@@ -249,68 +253,87 @@ export default function LocationPicker({
   ]);
 
   /*
-   * Инициализируем MapLibre
-   * на том же style, который
-   * используется основной картой JayMap.
+   * Инициализация MapLibre.
    */
   useEffect(() => {
     if (
       !open ||
-      !containerRef.current
+      !containerRef.current ||
+      mapRef.current
     ) {
       return;
     }
 
-    if (mapRef.current) {
-      return;
-    }
+    const container =
+      containerRef.current;
 
     const initialCenter =
       initialPosition ??
       targetCenter;
 
-    const map =
-      new maplibregl.Map({
-        container:
-          containerRef.current,
+    const initialZoom =
+      initialPosition
+        ? 16
+        : DEFAULT_ZOOM;
 
-        /*
-         * Ключевой момент:
-         * используем существующий
-         * рабочий style JayMap.
-         *
-         * В нём уже есть:
-         * - дороги
-         * - города
-         * - подписи
-         * - здания
-         * - вода
-         */
-        style:
-          "/map/styles/light.json",
+    let map: Map;
 
-        center:
-          initialCenter,
+    try {
+      map =
+        new maplibregl.Map({
+          container,
 
-        zoom:
-          initialPosition
-            ? 16
-            : DEFAULT_ZOOM,
+          /*
+           * Используем тот же style,
+           * что и основная карта JayMap.
+           */
+          style:
+            "/map/styles/light.json",
 
-        minZoom: 10,
+          center:
+            initialCenter,
 
-        maxZoom: 19,
+          zoom:
+            initialZoom,
 
-        attributionControl:
-          true,
+          minZoom:
+            10,
 
-        renderWorldCopies:
-          false,
+          maxZoom:
+            19,
 
-        antialias:
-          true,
-      });
+          /*
+           * Убираем attribution control.
+           */
+          attributionControl:
+            false,
 
+          renderWorldCopies:
+            false,
+
+          antialias:
+            true,
+        });
+    } catch (cause) {
+      console.error(
+        "[LocationPicker] Map initialization failed:",
+        cause
+      );
+
+      setMapError(
+        "Не удалось инициализировать карту."
+      );
+
+      return;
+    }
+
+    mapRef.current =
+      map;
+
+    /*
+     * Navigation controls
+     * оставляем.
+     */
     map.addControl(
       new maplibregl.NavigationControl(
         {
@@ -321,56 +344,163 @@ export default function LocationPicker({
       "top-right"
     );
 
+    /*
+     * Resize должен только
+     * обновлять геометрию.
+     *
+     * Никакого jumpTo здесь нет,
+     * иначе камера отпрыгивает.
+     */
+    const resize = () => {
+      if (
+        !mapRef.current
+      ) {
+        return;
+      }
+
+      map.resize();
+    };
+
+    const scheduleResize = () => {
+      requestAnimationFrame(
+        resize
+      );
+
+      window.setTimeout(
+        resize,
+        50
+      );
+
+      window.setTimeout(
+        resize,
+        200
+      );
+    };
+
+    resizeObserverRef.current =
+      new ResizeObserver(
+        scheduleResize
+      );
+
+    resizeObserverRef.current.observe(
+      container
+    );
+
+    /*
+     * Основная инициализация.
+     */
     map.once(
       "load",
-      () => {
+      async () => {
+        try {
+          /*
+           * Подключаем те же слои,
+           * которые используются MainMap.
+           */
+          await setupMapLayers(
+            map,
+            "ru"
+          );
+        } catch (cause) {
+          console.error(
+            "[LocationPicker] Failed to setup main map layers:",
+            cause
+          );
+
+          setMapError(
+            "Не удалось настроить слои карты."
+          );
+
+          return;
+        }
+
+        scheduleResize();
+
         /*
-         * Модалка открыта поверх
-         * уже существующей страницы,
-         * поэтому ResizeObserver / resize
-         * здесь обязателен.
+         * Если точка уже была сохранена —
+         * создаём marker.
          */
-        requestAnimationFrame(
-          () => {
-            map.resize();
-
-            map.jumpTo({
-              center:
-                initialCenter,
-
-              zoom:
-                initialPosition
-                  ? 16
-                  : DEFAULT_ZOOM,
-            });
-          }
-        );
-
         if (
           initialPosition
         ) {
+          markerRef.current?.remove();
+
           markerRef.current =
-            new maplibregl.Marker({
-              color:
-                "#6FC9C2",
-            })
-              .setLngLat(
-                initialPosition
-              )
-              .addTo(map);
+            createMarker(
+              map,
+              initialPosition
+            );
         }
+
+        /*
+         * ВАЖНО:
+         *
+         * Не показываем карту сразу после
+         * setupMapLayers().
+         *
+         * Ждём idle — MapLibre закончил
+         * текущую отрисовку и загрузку
+         * необходимых ресурсов.
+         */
+        map.once(
+          "idle",
+          () => {
+            if (
+              !mapRef.current
+            ) {
+              return;
+            }
+
+            map.resize();
+
+            requestAnimationFrame(
+              () => {
+                if (
+                  mapRef.current === map
+                ) {
+                  setMapReady(
+                    true
+                  );
+                }
+              }
+            );
+          }
+        );
       }
     );
 
+    /*
+     * Ошибки MapLibre.
+     *
+     * НЕ переводим mapReady=true:
+     * иначе пользователь увидит
+     * промежуточную/сломавшуюся карту.
+     */
+    map.on(
+      "error",
+      (event) => {
+        console.error(
+          "[LocationPicker] MapLibre error:",
+          event?.error
+        );
+
+        setMapError(
+          "Карта не смогла загрузить картографические данные."
+        );
+      }
+    );
+
+    /*
+     * Клик по карте.
+     */
     map.on(
       "click",
       async (event) => {
         const coordinates:
-          [number, number] =
-          [
-            event.lngLat.lng,
-            event.lngLat.lat,
-          ];
+          [number, number] = [
+          event.lngLat.lng,
+          event.lngLat.lat,
+        ];
 
         setPosition(
           coordinates
@@ -378,23 +508,30 @@ export default function LocationPicker({
 
         setError(null);
 
+        setMapError(null);
+
         setAddress("");
 
         setDistrict("");
 
-        setGeocoding(true);
+        setGeocoding(
+          true
+        );
 
+        /*
+         * Старый marker удаляем.
+         */
         markerRef.current?.remove();
 
+        /*
+         * Новый marker создаём
+         * сразу, независимо от geocoding.
+         */
         markerRef.current =
-          new maplibregl.Marker({
-            color:
-              "#6FC9C2",
-          })
-            .setLngLat(
-              coordinates
-            )
-            .addTo(map);
+          createMarker(
+            map,
+            coordinates
+          );
 
         try {
           const result =
@@ -410,14 +547,14 @@ export default function LocationPicker({
           setDistrict(
             result.district
           );
-        } catch (error) {
+        } catch (cause) {
           console.error(
             "[LocationPicker] Reverse geocoding failed:",
-            error
+            cause
           );
 
           setError(
-            "Точку установили, но адрес автоматически определить не удалось."
+            "Точку установили, но адрес автоматически определить не удалось. Адрес можно указать вручную."
           );
         } finally {
           setGeocoding(
@@ -427,10 +564,14 @@ export default function LocationPicker({
       }
     );
 
-    mapRef.current =
-      map;
+    scheduleResize();
 
     return () => {
+      resizeObserverRef.current?.disconnect();
+
+      resizeObserverRef.current =
+        null;
+
       markerRef.current?.remove();
 
       markerRef.current =
@@ -444,26 +585,17 @@ export default function LocationPicker({
   }, [open]);
 
   /*
-   * Город изменился уже после
-   * открытия picker.
+   * Если город изменился
+   * после открытия picker —
+   * перемещаем камеру.
    *
-   * Сбрасываем старый pin
-   * и переносим карту в новый город.
+   * initialPosition защищает
+   * существующую выбранную точку.
    */
   useEffect(() => {
     if (
       !open ||
-      !mapRef.current
-    ) {
-      return;
-    }
-
-    /*
-     * Если изменение произошло
-     * из-за существующей сохранённой
-     * точки, не уничтожаем её.
-     */
-    if (
+      !mapRef.current ||
       initialPosition
     ) {
       return;
@@ -514,6 +646,7 @@ export default function LocationPicker({
   }, [
     cityCoordinates,
     open,
+    initialPosition,
   ]);
 
   const handleConfirm =
@@ -522,17 +655,7 @@ export default function LocationPicker({
         return;
       }
 
-      if (
-        geocoding
-      ) {
-        return;
-      }
-
-      if (!address) {
-        setError(
-          "Нажмите на карту на нужный адрес и дождитесь определения адреса."
-        );
-
+      if (geocoding) {
         return;
       }
 
@@ -562,7 +685,6 @@ export default function LocationPicker({
       />
 
       <div className="relative flex h-[min(720px,calc(100vh-40px))] w-full max-w-[920px] flex-col overflow-hidden rounded-[24px] border border-white/10 bg-[#11171f] shadow-[0_30px_100px_rgba(0,0,0,0.5)]">
-        {/* Header */}
         <div className="flex items-center justify-between border-b border-white/10 bg-[#11171f] px-5 py-4">
           <div>
             <div className="text-[14px] font-semibold text-white/90">
@@ -588,28 +710,39 @@ export default function LocationPicker({
           </button>
         </div>
 
-        {/* Map */}
         <div className="relative min-h-0 flex-1">
           <div
             ref={
               containerRef
             }
-            className="absolute inset-0"
+            className={[
+              "relative h-full w-full",
+              mapReady
+                ? "opacity-100"
+                : "opacity-0",
+            ].join(" ")}
           />
 
-          <div className="pointer-events-none absolute left-4 top-4 rounded-full border border-white/10 bg-white/90 px-3 py-2 text-[11px] font-semibold text-slate-700 shadow-lg">
+          <div className="pointer-events-none absolute left-4 top-4 z-30 rounded-full border border-white/10 bg-white/90 px-3 py-2 text-[11px] font-semibold text-slate-700 shadow-lg">
             {cityName ||
               "Кыргызстан"}
           </div>
 
+          {mapError && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#11171f]/80 px-6 text-center">
+              <div className="max-w-[420px] rounded-2xl border border-red-400/20 bg-[#11171f]/95 px-5 py-4 text-[12px] text-red-200 shadow-xl">
+                {mapError}
+              </div>
+            </div>
+          )}
+
           {geocoding && (
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-white/10 bg-[#11171f]/95 px-4 py-2 text-[11px] text-white/75 shadow-lg backdrop-blur-md">
+            <div className="pointer-events-none absolute bottom-4 left-1/2 z-30 -translate-x-1/2 rounded-full border border-white/10 bg-[#11171f]/95 px-4 py-2 text-[11px] text-white/75 shadow-lg backdrop-blur-md">
               Определяем адрес…
             </div>
           )}
         </div>
 
-        {/* Footer */}
         <div className="border-t border-white/10 bg-[#11171f] px-5 py-4">
           <div className="mb-3 rounded-xl border border-white/[0.07] bg-white/[0.025] px-3.5 py-3">
             <div className="text-[9px] font-semibold uppercase tracking-[0.08em] text-white/30">
@@ -663,7 +796,6 @@ export default function LocationPicker({
                 type="button"
                 disabled={
                   !position ||
-                  !address ||
                   geocoding
                 }
                 onClick={
@@ -671,8 +803,8 @@ export default function LocationPicker({
                 }
                 className={[
                   "h-11 rounded-full px-5 text-[12px] font-semibold transition",
+
                   position &&
-                  address &&
                   !geocoding
                     ? "bg-[#6FC9C2] text-[#0a0f14] hover:bg-[#7ad6ce]"
                     : "cursor-not-allowed bg-white/10 text-white/25",
