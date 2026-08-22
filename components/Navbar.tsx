@@ -20,12 +20,9 @@ import {
 
 import CityDropdown from "./CityDropdown";
 import AuthModal from "./auth/AuthModal";
+import ListingCreateModal from "./listings/ListingCreateModal";
 
 interface NavbarProps {
-  /**
-   * Navbar только сообщает наверх, какой город выбран.
-   * Про карту и MapLibre Navbar ничего не знает.
-   */
   onCitySelect?: (
     city: City
   ) => void;
@@ -40,19 +37,11 @@ interface DropdownPosition {
 export default function Navbar({
   onCitySelect,
 }: NavbarProps) {
-  // =========================
-  // Layout
-  // =========================
-
   const TOP = "top-5";
   const MAX_WIDTH = "max-w-[1000px]";
   const WIDTH = "w-[calc(100%-40px)]";
   const HEIGHT = "h-[68px]";
   const PADDING_X = "px-6";
-
-  // =========================
-  // Grid
-  // =========================
 
   const LEFT_WIDTH = "220px";
   const RIGHT_WIDTH = "220px";
@@ -63,10 +52,6 @@ export default function Navbar({
     setLanguage,
   } = useTranslation();
 
-  // =========================
-  // Auth
-  // =========================
-
   const {
     user,
     profile,
@@ -75,12 +60,15 @@ export default function Navbar({
     signOut,
   } = useAuth();
 
-  const [authModalOpen, setAuthModalOpen] =
-    useState(false);
+  const [
+    authModalOpen,
+    setAuthModalOpen,
+  ] = useState(false);
 
-  // =========================
-  // Logo
-  // =========================
+  const [
+    listingCreateOpen,
+    setListingCreateOpen,
+  ] = useState(false);
 
   const LOGO_X =
     "translate-x-[15px]";
@@ -90,10 +78,6 @@ export default function Navbar({
 
   const LOGO_COLOR =
     "text-[#6FC9C2]";
-
-  // =========================
-  // Search
-  // =========================
 
   const SEARCH_WIDTH =
     "w-[430px]";
@@ -107,36 +91,22 @@ export default function Navbar({
   const SEARCH_PADDING =
     "px-5";
 
-  // =========================
-  // Right
-  // =========================
-
   const RIGHT_X =
     "translate-x-[-20px]";
 
   const BUTTON_GAP =
     "gap-2";
 
-  // =========================
-  // Buttons
-  // =========================
-
   const LOGIN_COLOR =
     "text-[#D6D3CC]";
-
-  // =========================
-  // City dropdown
-  // =========================
 
   const searchButtonRef =
     useRef<HTMLButtonElement>(
       null
     );
 
-  const [
-    cities,
-    setCities,
-  ] = useState<City[]>([]);
+  const [cities, setCities] =
+    useState<City[]>([]);
 
   const [
     selectedCity,
@@ -145,10 +115,8 @@ export default function Navbar({
     null
   );
 
-  const [
-    isOpen,
-    setIsOpen,
-  ] = useState(false);
+  const [isOpen, setIsOpen] =
+    useState(false);
 
   const [
     isMounted,
@@ -162,10 +130,6 @@ export default function Navbar({
     useState<DropdownPosition | null>(
       null
     );
-
-  // =========================
-  // Load cities
-  // =========================
 
   useEffect(() => {
     let cancelled = false;
@@ -187,10 +151,6 @@ export default function Navbar({
       cancelled = true;
     };
   }, []);
-
-  // =========================
-  // Dropdown position
-  // =========================
 
   const updatePosition =
     useCallback(() => {
@@ -246,16 +206,12 @@ export default function Navbar({
     updatePosition,
   ]);
 
-  // =========================
-  // City handlers
-  // =========================
-
-  const handleToggle =
-    () => {
-      setIsOpen(
-        (prev) => !prev
-      );
-    };
+  const handleToggle = () => {
+    setIsOpen(
+      (previous) =>
+        !previous
+    );
+  };
 
   const handleRequestClose =
     () => {
@@ -270,14 +226,9 @@ export default function Navbar({
       onCitySelect?.(city);
     };
 
-  // =========================
-  // Auth handlers
-  // =========================
-
-  const handleLogin =
-    () => {
-      setAuthModalOpen(true);
-    };
+  const handleLogin = () => {
+    setAuthModalOpen(true);
+  };
 
   const handleLogout =
     async () => {
@@ -291,9 +242,23 @@ export default function Navbar({
       }
     };
 
-  // =========================
-  // Search label
-  // =========================
+  /*
+   * Главный handler публикации.
+   *
+   * Гость:
+   *   → AuthModal
+   *
+   * Авторизованный:
+   *   → ListingCreateModal
+   */
+  const handlePublish = () => {
+    if (!user) {
+      setAuthModalOpen(true);
+      return;
+    }
+
+    setListingCreateOpen(true);
+  };
 
   const searchLabel =
     selectedCity
@@ -305,29 +270,20 @@ export default function Navbar({
           "navbar.searchPlaceholder"
         );
 
-  // =========================
-  // User display
-  // =========================
-
   const userEmail =
-    user?.email ??
-    "";
+    user?.email ?? "";
 
   const userName =
     profile?.display_name?.trim() ||
-    user?.user_metadata
-      ?.full_name ||
-    user?.user_metadata
-      ?.name ||
+    user?.user_metadata?.full_name ||
+    user?.user_metadata?.name ||
     userEmail.split("@")[0] ||
     "Профиль";
 
   const userAvatar =
     profile?.avatar_url ||
-    user?.user_metadata
-      ?.avatar_url ||
-    user?.user_metadata
-      ?.picture ||
+    user?.user_metadata?.avatar_url ||
+    user?.user_metadata?.picture ||
     null;
 
   return (
@@ -354,10 +310,11 @@ export default function Navbar({
             "relative",
           ].join(" ")}
           style={{
-            gridTemplateColumns: `${LEFT_WIDTH} 1fr ${RIGHT_WIDTH}`,
+            gridTemplateColumns:
+              `${LEFT_WIDTH} 1fr ${RIGHT_WIDTH}`,
           }}
         >
-          {/* ================= Logo ================= */}
+          {/* Logo */}
 
           <div
             className={[
@@ -383,7 +340,7 @@ export default function Navbar({
             </h1>
           </div>
 
-          {/* ================= Language ================= */}
+          {/* Language */}
 
           <div className="absolute left-[130px] top-[37px] -translate-y-1/2 flex items-center gap-1">
             {(
@@ -427,7 +384,7 @@ export default function Navbar({
             )}
           </div>
 
-          {/* ================= Search ================= */}
+          {/* Search */}
 
           <div
             className={[
@@ -491,7 +448,7 @@ export default function Navbar({
             </button>
           </div>
 
-          {/* ================= Right ================= */}
+          {/* Right */}
 
           <div
             className={[
@@ -503,7 +460,8 @@ export default function Navbar({
             ].join(" ")}
           >
             <div className="flex items-center gap-1 mr-3">
-              {authLoading || profileLoading ? (
+              {authLoading ||
+              profileLoading ? (
                 <div className="h-9 w-24 animate-pulse rounded-full bg-white/10" />
               ) : user ? (
                 <div className="flex items-center gap-2">
@@ -567,23 +525,9 @@ export default function Navbar({
 
               <button
                 type="button"
-                onClick={() => {
-                  if (!user) {
-                    setAuthModalOpen(
-                      true
-                    );
-                    return;
-                  }
-
-                  /**
-                   * Publish flow пока ещё не реализован.
-                   * Авторизация уже работает независимо
-                   * от будущей формы публикации.
-                   */
-                  console.log(
-                    "[Navbar] Publish clicked"
-                  );
-                }}
+                onClick={
+                  handlePublish
+                }
                 className="rounded-full bg-emerald-600 text-sm font-semibold text-white transition hover:bg-emerald-700"
                 style={{
                   paddingLeft:
@@ -608,7 +552,7 @@ export default function Navbar({
           </div>
         </div>
 
-        {/* ================= City dropdown ================= */}
+        {/* City dropdown */}
 
         {isMounted &&
           position &&
@@ -638,7 +582,7 @@ export default function Navbar({
           )}
       </header>
 
-      {/* ================= Auth modal ================= */}
+      {/* Auth */}
 
       <AuthModal
         open={
@@ -646,6 +590,19 @@ export default function Navbar({
         }
         onClose={() =>
           setAuthModalOpen(
+            false
+          )
+        }
+      />
+
+      {/* Listing creation */}
+
+      <ListingCreateModal
+        open={
+          listingCreateOpen
+        }
+        onClose={() =>
+          setListingCreateOpen(
             false
           )
         }
