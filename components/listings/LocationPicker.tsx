@@ -18,7 +18,9 @@ export interface LocationResult {
     number,
     number
   ];
+
   address: string;
+
   district: string;
 }
 
@@ -26,6 +28,10 @@ interface LocationPickerProps {
   open: boolean;
 
   cityName: string;
+
+  cityCoordinates:
+    | [number, number]
+    | null;
 
   initialPosition:
     | [number, number]
@@ -38,53 +44,6 @@ interface LocationPickerProps {
   ) => void;
 }
 
-/**
- * Координаты основных городов Кыргызстана.
- *
- * Это fallback.
- * Reverse geocoding после выбора точки
- * определяет уже фактический адрес.
- */
-const CITY_CENTERS: Record<
-  string,
-  [number, number]
-> = {
-  Бишкек: [
-    74.6122,
-    42.8746,
-  ],
-
-  Ош: [
-    72.7985,
-    40.5283,
-  ],
-
-  Каракол: [
-    78.3956,
-    42.4907,
-  ],
-
-  Нарын: [
-    75.9911,
-    41.4287,
-  ],
-
-  Талас: [
-    72.2429,
-    42.5228,
-  ],
-
-  Баткен: [
-    70.8194,
-    40.0626,
-  ],
-
-  Джалал-Абад: [
-    73.0179,
-    40.9333,
-  ],
-};
-
 const DEFAULT_CENTER: [
   number,
   number
@@ -95,13 +54,6 @@ const DEFAULT_CENTER: [
 
 const DEFAULT_ZOOM = 13;
 
-/**
- * Reverse geocoding через Nominatim.
- *
- * Для MVP этого достаточно.
- * Позже, при росте проекта, вынесем
- * geocoding в backend/proxy.
- */
 async function reverseGeocode(
   lng: number,
   lat: number
@@ -150,9 +102,7 @@ async function reverseGeocode(
       }
     );
 
-  if (
-    !response.ok
-  ) {
+  if (!response.ok) {
     throw new Error(
       "Не удалось определить адрес."
     );
@@ -164,21 +114,12 @@ async function reverseGeocode(
   const address =
     data?.address ?? {};
 
-  /*
-   * Приоритет:
-   *
-   * road
-   * pedestrian
-   * residential
-   * footway
-   *
-   * + house_number
-   */
   const street =
     address.road ??
     address.pedestrian ??
     address.residential ??
     address.footway ??
+    address.path ??
     "";
 
   const houseNumber =
@@ -189,6 +130,7 @@ async function reverseGeocode(
     address.suburb ??
     address.neighbourhood ??
     address.city_district ??
+    address.quarter ??
     address.county ??
     "";
 
@@ -201,10 +143,14 @@ async function reverseGeocode(
   ) {
     normalizedAddress =
       `${street}, ${houseNumber}`;
+  } else if (
+    street
+  ) {
+    normalizedAddress =
+      street;
   } else {
     normalizedAddress =
-      street ||
-      data.display_name ||
+      data.display_name ??
       "";
   }
 
@@ -212,14 +158,14 @@ async function reverseGeocode(
     address:
       normalizedAddress,
 
-    district:
-      district,
+    district,
   };
 }
 
 export default function LocationPicker({
   open,
   cityName,
+  cityCoordinates,
   initialPosition,
   onClose,
   onConfirm,
@@ -242,9 +188,10 @@ export default function LocationPicker({
   const [
     position,
     setPosition,
-  ] = useState<
-    [number, number] | null
-  >(initialPosition);
+  ] =
+    useState<
+      [number, number] | null
+    >(null);
 
   const [
     address,
@@ -264,20 +211,24 @@ export default function LocationPicker({
   const [
     error,
     setError,
-  ] = useState<
-    string | null
-  >(null);
+  ] =
+    useState<string | null>(
+      null
+    );
 
-  /*
-   * Если город изменился —
-   * начинаем с его центра.
-   */
-  const cityCenter =
-    CITY_CENTERS[
-      cityName
-    ] ??
+  const targetCenter =
+    cityCoordinates ??
     DEFAULT_CENTER;
 
+  /*
+   * При открытии:
+   *
+   * есть сохранённый pin
+   * → показываем его
+   *
+   * нет pin
+   * → центр города
+   */
   useEffect(() => {
     if (!open) {
       return;
@@ -287,26 +238,20 @@ export default function LocationPicker({
     setAddress("");
     setDistrict("");
 
-    if (
-      initialPosition
-    ) {
-      setPosition(
-        initialPosition
-      );
-    } else {
-      setPosition(
-        cityCenter
-      );
-    }
+    setPosition(
+      initialPosition ??
+        targetCenter
+    );
   }, [
     open,
-    cityName,
     initialPosition,
-    cityCenter,
+    cityCoordinates,
   ]);
 
   /*
-   * Map initialization.
+   * Инициализируем MapLibre
+   * на том же style, который
+   * используется основной картой JayMap.
    */
   useEffect(() => {
     if (
@@ -320,74 +265,41 @@ export default function LocationPicker({
       return;
     }
 
-    const center =
+    const initialCenter =
       initialPosition ??
-      cityCenter;
+      targetCenter;
 
-    /*
-     * Используем OSM tiles,
-     * чтобы в picker были:
-     *
-     * города
-     * улицы
-     * дороги
-     * номера/подписи
-     *
-     * Это utility-map, поэтому здесь
-     * важнее читаемость, чем
-     * декоративная карта JayMap.
-     */
     const map =
       new maplibregl.Map({
         container:
           containerRef.current,
 
-        style: {
-          version: 8,
+        /*
+         * Ключевой момент:
+         * используем существующий
+         * рабочий style JayMap.
+         *
+         * В нём уже есть:
+         * - дороги
+         * - города
+         * - подписи
+         * - здания
+         * - вода
+         */
+        style:
+          "/map/styles/light.json",
 
-          sources: {
-            osm: {
-              type:
-                "raster",
-
-              tiles: [
-                "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-              ],
-
-              tileSize:
-                256,
-
-              attribution:
-                "© OpenStreetMap contributors",
-            },
-          },
-
-          layers: [
-            {
-              id:
-                "osm",
-
-              type:
-                "raster",
-
-              source:
-                "osm",
-
-              minzoom:
-                0,
-
-              maxzoom:
-                19,
-            },
-          ],
-        },
-
-        center,
+        center:
+          initialCenter,
 
         zoom:
           initialPosition
             ? 16
             : DEFAULT_ZOOM,
+
+        minZoom: 10,
+
+        maxZoom: 19,
 
         attributionControl:
           true,
@@ -409,9 +321,31 @@ export default function LocationPicker({
       "top-right"
     );
 
-    map.on(
+    map.once(
       "load",
       () => {
+        /*
+         * Модалка открыта поверх
+         * уже существующей страницы,
+         * поэтому ResizeObserver / resize
+         * здесь обязателен.
+         */
+        requestAnimationFrame(
+          () => {
+            map.resize();
+
+            map.jumpTo({
+              center:
+                initialCenter,
+
+              zoom:
+                initialPosition
+                  ? 16
+                  : DEFAULT_ZOOM,
+            });
+          }
+        );
+
         if (
           initialPosition
         ) {
@@ -431,7 +365,7 @@ export default function LocationPicker({
     map.on(
       "click",
       async (event) => {
-        const nextPosition:
+        const coordinates:
           [number, number] =
           [
             event.lngLat.lng,
@@ -439,10 +373,15 @@ export default function LocationPicker({
           ];
 
         setPosition(
-          nextPosition
+          coordinates
         );
 
         setError(null);
+
+        setAddress("");
+
+        setDistrict("");
+
         setGeocoding(true);
 
         markerRef.current?.remove();
@@ -453,15 +392,15 @@ export default function LocationPicker({
               "#6FC9C2",
           })
             .setLngLat(
-              nextPosition
+              coordinates
             )
             .addTo(map);
 
         try {
           const result =
             await reverseGeocode(
-              nextPosition[0],
-              nextPosition[1]
+              coordinates[0],
+              coordinates[1]
             );
 
           setAddress(
@@ -502,15 +441,14 @@ export default function LocationPicker({
       mapRef.current =
         null;
     };
-  }, [
-    open,
-    cityName,
-  ]);
+  }, [open]);
 
   /*
-   * When city changes while
-   * picker is already open —
-   * move map there.
+   * Город изменился уже после
+   * открытия picker.
+   *
+   * Сбрасываем старый pin
+   * и переносим карту в новый город.
    */
   useEffect(() => {
     if (
@@ -521,9 +459,9 @@ export default function LocationPicker({
     }
 
     /*
-     * Если уже есть
-     * начальная точка —
-     * не перетираем её.
+     * Если изменение произошло
+     * из-за существующей сохранённой
+     * точки, не уничтожаем её.
      */
     if (
       initialPosition
@@ -534,16 +472,9 @@ export default function LocationPicker({
     const map =
       mapRef.current;
 
-    map.flyTo({
-      center:
-        cityCenter,
-
-      zoom:
-        DEFAULT_ZOOM,
-
-      duration:
-        700,
-    });
+    const nextCenter =
+      cityCoordinates ??
+      DEFAULT_CENTER;
 
     markerRef.current?.remove();
 
@@ -551,19 +482,39 @@ export default function LocationPicker({
       null;
 
     setPosition(
-      cityCenter
+      nextCenter
     );
 
     setAddress("");
-    setDistrict("");
-    setError(null);
-  }, [
-    cityName,
-  ]);
 
-  if (!open) {
-    return null;
-  }
+    setDistrict("");
+
+    setError(null);
+
+    map.flyTo({
+      center:
+        nextCenter,
+
+      zoom:
+        DEFAULT_ZOOM,
+
+      duration:
+        600,
+
+      essential:
+        true,
+    });
+
+    window.setTimeout(
+      () => {
+        map.resize();
+      },
+      50
+    );
+  }, [
+    cityCoordinates,
+    open,
+  ]);
 
   const handleConfirm =
     () => {
@@ -571,9 +522,15 @@ export default function LocationPicker({
         return;
       }
 
+      if (
+        geocoding
+      ) {
+        return;
+      }
+
       if (!address) {
         setError(
-          "Установите точку на улице, чтобы определить адрес."
+          "Нажмите на карту на нужный адрес и дождитесь определения адреса."
         );
 
         return;
@@ -589,16 +546,22 @@ export default function LocationPicker({
       });
     };
 
+  if (!open) {
+    return null;
+  }
+
   return (
     <div className="fixed inset-0 z-[1400] flex items-center justify-center p-5">
       <button
         type="button"
         aria-label="Закрыть карту"
-        onClick={onClose}
+        onClick={
+          onClose
+        }
         className="absolute inset-0 bg-black/60 backdrop-blur-[14px]"
       />
 
-      <div className="relative flex h-[min(720px,calc(100vh-40px))] w-full max-w-[900px] flex-col overflow-hidden rounded-[24px] border border-white/10 bg-[#11171f] shadow-[0_30px_100px_rgba(0,0,0,0.5)]">
+      <div className="relative flex h-[min(720px,calc(100vh-40px))] w-full max-w-[920px] flex-col overflow-hidden rounded-[24px] border border-white/10 bg-[#11171f] shadow-[0_30px_100px_rgba(0,0,0,0.5)]">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-white/10 bg-[#11171f] px-5 py-4">
           <div>
@@ -607,9 +570,10 @@ export default function LocationPicker({
             </div>
 
             <div className="mt-1 text-[11px] text-white/35">
-              {cityName
-                ? `Город: ${cityName}. Нажмите на карте на нужный адрес.`
-                : "Нажмите на карте на нужный адрес."}
+              Город:{" "}
+              {cityName ||
+                "не выбран"}
+              . Нажмите на карте на нужный адрес.
             </div>
           </div>
 
@@ -633,14 +597,13 @@ export default function LocationPicker({
             className="absolute inset-0"
           />
 
-          {/* City badge */}
-          <div className="pointer-events-none absolute left-4 top-4 rounded-full border border-white/10 bg-[#11171f]/90 px-3 py-2 text-[11px] font-medium text-white/75 shadow-lg backdrop-blur-md">
-            {cityName}
+          <div className="pointer-events-none absolute left-4 top-4 rounded-full border border-white/10 bg-white/90 px-3 py-2 text-[11px] font-semibold text-slate-700 shadow-lg">
+            {cityName ||
+              "Кыргызстан"}
           </div>
 
-          {/* Geocoding indicator */}
           {geocoding && (
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-white/10 bg-[#11171f]/95 px-4 py-2 text-[11px] text-white/70 shadow-lg">
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-white/10 bg-[#11171f]/95 px-4 py-2 text-[11px] text-white/75 shadow-lg backdrop-blur-md">
               Определяем адрес…
             </div>
           )}
@@ -653,7 +616,7 @@ export default function LocationPicker({
               Определённый адрес
             </div>
 
-            <div className="mt-1 text-[13px] font-medium text-white/85">
+            <div className="mt-1 text-[13px] font-medium text-white/90">
               {geocoding
                 ? "Определяем…"
                 : address ||
@@ -663,9 +626,7 @@ export default function LocationPicker({
             {district && (
               <div className="mt-1 text-[10px] text-white/35">
                 Район:{" "}
-                {
-                  district
-                }
+                {district}
               </div>
             )}
           </div>
@@ -700,13 +661,13 @@ export default function LocationPicker({
 
               <button
                 type="button"
-                onClick={
-                  handleConfirm
-                }
                 disabled={
                   !position ||
                   !address ||
                   geocoding
+                }
+                onClick={
+                  handleConfirm
                 }
                 className={[
                   "h-11 rounded-full px-5 text-[12px] font-semibold transition",

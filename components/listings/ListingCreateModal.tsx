@@ -2860,12 +2860,28 @@ export default function ListingCreateModal({
 
                   <select
                     value={form.cityId}
-                    onChange={(event) =>
-                      updateForm(
-                        "cityId",
-                        event.target.value
-                      )
-                    }
+                    onChange={(event) => {
+                      const cityId =
+                        event.target.value;
+
+                      setForm(
+                        (previous) => ({
+                          ...previous,
+                          cityId,
+
+                          // Новый город = старая точка больше не актуальна
+                          coordinates: null,
+
+                          // Сбрасываем адрес от предыдущего города
+                          address: "",
+
+                          // Сбрасываем район
+                          district: "",
+                        })
+                      );
+
+                      setError(null);
+                    }}
                     className="mt-2 h-11 w-full rounded-[12px] border border-white/10 bg-[#1d242e] px-3.5 text-[13px] text-white outline-none focus:border-[#6FC9C2]"
                   >
                     <option
@@ -3267,21 +3283,34 @@ export default function ListingCreateModal({
 
         <LocationPicker
           open={locationPickerOpen}
+
           cityName={
             selectedCity
               ? getCityDisplayName(
                   selectedCity,
                   "ru"
                 )
-              : "Кыргызстан"
+              : ""
           }
+
+          cityCoordinates={
+            selectedCity?.coordinates ??
+            null
+          }
+
           initialPosition={
             form.coordinates
           }
+
           onClose={() =>
-            setLocationPickerOpen(false)
+            setLocationPickerOpen(
+              false
+            )
           }
-          onConfirm={handleConfirmLocation}
+
+          onConfirm={
+            handleConfirmLocation
+          }
         />
 
       </div>
