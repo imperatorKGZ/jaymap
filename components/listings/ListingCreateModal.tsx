@@ -6,6 +6,10 @@ import {
   useState,
 } from "react";
 
+import ListingPreview, {
+  type ListingPreviewData,
+} from "./ListingPreview";
+
 import {
   useAuth,
 } from "@/lib/auth/AuthProvider";
@@ -21,6 +25,10 @@ import LocationPicker from "./LocationPicker";
 import ListingPhotoPicker, {
   type ListingDraftPhoto,
 } from "./ListingPhotoPicker";
+
+import {
+  persistListing,
+} from "@/lib/listings/persistence";
 
 export type ListingCreateType =
   | "rental"
@@ -234,7 +242,9 @@ export default function ListingCreateModal({
   const [
     photos,
     setPhotos,
-  ] = useState<ListingDraftPhoto[]>([]);
+  ] = useState<ListingDraftPhoto[]>(
+    []
+  );
 
   const [
     cities,
@@ -253,6 +263,16 @@ export default function ListingCreateModal({
     null
   );
 
+  const [
+    previewOpen,
+    setPreviewOpen,
+  ] = useState(false);
+
+  const [
+    persisting,
+    setPersisting,
+  ] = useState(false);
+
   useEffect(() => {
     if (!open) {
       return;
@@ -260,13 +280,20 @@ export default function ListingCreateModal({
 
     setSelectedType(null);
     setStep(1);
+
     setForm(
       createInitialForm(
         profile?.contact_phone ?? ""
       )
     );
+
     setPhotos([]);
+
     setError(null);
+
+    setPreviewOpen(false);
+
+    setPersisting(false);
 
     const previousOverflow =
       document.body.style
@@ -279,7 +306,10 @@ export default function ListingCreateModal({
       document.body.style.overflow =
         previousOverflow;
     };
-  }, [open, profile?.contact_phone]);
+  }, [
+    open,
+    profile?.contact_phone,
+  ]);
 
   useEffect(() => {
     if (!open) {
@@ -314,7 +344,10 @@ export default function ListingCreateModal({
             city.id ===
             form.cityId
         ) ?? null,
-      [cities, form.cityId]
+      [
+        cities,
+        form.cityId,
+      ]
     );
 
   const selectedOption =
@@ -402,6 +435,7 @@ export default function ListingCreateModal({
         setError(
           "Введите заголовок объявления."
         );
+
         return;
       }
 
@@ -409,6 +443,7 @@ export default function ListingCreateModal({
         setError(
           "Заголовок должен содержать минимум 8 символов."
         );
+
         return;
       }
 
@@ -419,6 +454,7 @@ export default function ListingCreateModal({
         setError(
           "Укажите корректную цену."
         );
+
         return;
       }
 
@@ -434,6 +470,7 @@ export default function ListingCreateModal({
           setError(
             "Выберите тип жилья."
           );
+
           return;
         }
 
@@ -444,6 +481,7 @@ export default function ListingCreateModal({
           setError(
             "Укажите количество комнат."
           );
+
           return;
         }
 
@@ -467,6 +505,7 @@ export default function ListingCreateModal({
           setError(
             "Укажите площадь."
           );
+
           return;
         }
       }
@@ -495,6 +534,7 @@ export default function ListingCreateModal({
           setError(
             "Укажите площадь помещения."
           );
+
           return;
         }
 
@@ -502,6 +542,7 @@ export default function ListingCreateModal({
           setError(
             "Выберите назначение помещения."
           );
+
           return;
         }
       }
@@ -530,6 +571,7 @@ export default function ListingCreateModal({
           setError(
             "Укажите площадь участка."
           );
+
           return;
         }
 
@@ -537,6 +579,7 @@ export default function ListingCreateModal({
           setError(
             "Выберите назначение земли."
           );
+
           return;
         }
       }
@@ -556,7 +599,6 @@ export default function ListingCreateModal({
 
   const handleContinueFromStepTwo =
     () => {
-      // Reuse the existing Step 2 validation.
       handleSaveStepTwo();
     };
 
@@ -599,6 +641,7 @@ export default function ListingCreateModal({
         setError(
           "Выберите город."
         );
+
         return;
       }
 
@@ -606,6 +649,7 @@ export default function ListingCreateModal({
         setError(
           "Укажите адрес объекта."
         );
+
         return;
       }
 
@@ -613,6 +657,7 @@ export default function ListingCreateModal({
         setError(
           "Укажите точку объекта на карте."
         );
+
         return;
       }
 
@@ -620,6 +665,7 @@ export default function ListingCreateModal({
         setError(
           "Добавьте хотя бы одну фотографию."
         );
+
         return;
       }
 
@@ -627,28 +673,22 @@ export default function ListingCreateModal({
         setError(
           "Укажите телефон для связи."
         );
+
         return;
       }
 
       setError(null);
 
-      console.log(
-        "[ListingCreateModal] Draft ready:",
-        {
-          type: selectedType,
-          form,
-          photos: photos.map((photo) => ({
-            id: photo.id,
-            name: photo.file.name,
-            size: photo.file.size,
-          })),
-        }
-      );
+      setPreviewOpen(true);
     };
 
   const locationText =
     form.coordinates
-      ? `${form.coordinates[1].toFixed(5)}, ${form.coordinates[0].toFixed(5)}`
+      ? `${form.coordinates[1].toFixed(
+          5
+        )}, ${form.coordinates[0].toFixed(
+          5
+        )}`
       : "Точка не выбрана";
 
   const stepLabel =
@@ -658,16 +698,403 @@ export default function ListingCreateModal({
         ? "Шаг 2 из 3"
         : "Шаг 3 из 3";
 
+  const previewData:
+    | ListingPreviewData
+    | null =
+    selectedType
+      ? {
+          type:
+            selectedType,
+
+          typeLabel:
+            selectedOption?.title ??
+            "Объект",
+
+          title:
+            form.title.trim(),
+
+          description:
+            form.description.trim(),
+
+          price:
+            Number(
+              form.price
+                .replace(/\s/g, "")
+                .replace(
+                  ",",
+                  "."
+                )
+            ),
+
+          currency:
+            form.currency,
+
+          propertyType:
+            form.propertyType,
+
+          propertyTypeLabel:
+            RENTAL_PROPERTY_TYPES.find(
+              (item) =>
+                item.value ===
+                form.propertyType
+            )?.label ??
+            "",
+
+          rooms:
+            form.rooms,
+
+          area:
+            form.area,
+
+          floor:
+            form.floor,
+
+          totalFloors:
+            form.totalFloors,
+
+          furnished:
+            form.furnished,
+
+          parking:
+            form.parking,
+
+          pets:
+            form.pets,
+
+          purpose:
+            form.purpose,
+
+          purposeLabel:
+            COMMERCIAL_PURPOSES.find(
+              (item) =>
+                item.value ===
+                form.purpose
+            )?.label ??
+            "",
+
+          landUse:
+            form.landUse,
+
+          landUseLabel:
+            LAND_USES.find(
+              (item) =>
+                item.value ===
+                form.landUse
+            )?.label ??
+            "",
+
+          ratePerSqm:
+            form.ratePerSqm,
+
+          cityName:
+            selectedCity
+              ? getCityDisplayName(
+                  selectedCity,
+                  "ru"
+                )
+              : "",
+
+          district:
+            form.district.trim(),
+
+          address:
+            form.address.trim(),
+
+          coordinates:
+            form.coordinates,
+
+          phone:
+            form.phone.trim(),
+
+          telegram:
+            form.telegram.trim(),
+
+          whatsapp:
+            form.whatsapp.trim(),
+
+          photos,
+        }
+      : null;
+
+  const handlePersistListing =
+    async (
+      mode:
+        | "draft"
+        | "published"
+    ) => {
+      if (persisting) {
+        return;
+      }
+
+      if (
+        !previewData ||
+        !selectedType
+      ) {
+        return;
+      }
+
+      setPersisting(
+        true
+      );
+
+      setError(null);
+
+      try {
+        const price =
+          Number(
+            form.price
+              .replace(/\s/g, "")
+              .replace(
+                ",",
+                "."
+              )
+          );
+
+        const area =
+          form.area.trim()
+            ? Number(
+                form.area
+                  .replace(
+                    /\s/g,
+                    ""
+                  )
+                  .replace(
+                    ",",
+                    "."
+                  )
+              )
+            : null;
+
+        const floor =
+          form.floor.trim()
+            ? Number(
+                form.floor
+              )
+            : null;
+
+        const totalFloors =
+          form.totalFloors.trim()
+            ? Number(
+                form.totalFloors
+              )
+            : null;
+
+        const ratePerSqm =
+          form.ratePerSqm.trim()
+            ? Number(
+                form.ratePerSqm
+                  .replace(
+                    /\s/g,
+                    ""
+                  )
+                  .replace(
+                    ",",
+                    "."
+                  )
+              )
+            : null;
+
+        if (
+          !Number.isFinite(
+            price
+          ) ||
+          price <= 0
+        ) {
+          setError(
+            "Укажите корректную цену."
+          );
+
+          return;
+        }
+
+        if (
+          area !== null &&
+          (!Number.isFinite(
+            area
+          ) ||
+            area <= 0)
+        ) {
+          setError(
+            "Укажите корректную площадь."
+          );
+
+          return;
+        }
+
+        if (
+          floor !== null &&
+          (!Number.isInteger(
+            floor
+          ) ||
+            floor < 0)
+        ) {
+          setError(
+            "Укажите корректный этаж."
+          );
+
+          return;
+        }
+
+        if (
+          totalFloors !== null &&
+          (!Number.isInteger(
+            totalFloors
+          ) ||
+            totalFloors < 1)
+        ) {
+          setError(
+            "Укажите корректную этажность дома."
+          );
+
+          return;
+        }
+
+        if (
+          ratePerSqm !== null &&
+          (!Number.isFinite(
+            ratePerSqm
+          ) ||
+            ratePerSqm <= 0)
+        ) {
+          setError(
+            "Укажите корректную цену за м²."
+          );
+
+          return;
+        }
+
+        if (
+          !form.coordinates ||
+          form.coordinates.length !==
+            2
+        ) {
+          setError(
+            "Точка объекта не определена."
+          );
+
+          return;
+        }
+
+        const result =
+          await persistListing(
+            {
+              selectedType,
+
+              title:
+                form.title.trim(),
+
+              description:
+                form.description.trim(),
+
+              price,
+
+              currency:
+                form.currency,
+
+              propertyType:
+                form.propertyType,
+
+              rooms:
+                form.rooms,
+
+              area,
+
+              floor,
+
+              totalFloors,
+
+              furnished:
+                form.furnished,
+
+              parking:
+                form.parking,
+
+              pets:
+                form.pets,
+
+              purpose:
+                form.purpose.trim() ||
+                null,
+
+              landUse:
+                form.landUse.trim() ||
+                null,
+
+              ratePerSqm,
+
+              cityId:
+                form.cityId,
+
+              district:
+                form.district.trim(),
+
+              address:
+                form.address.trim(),
+
+              coordinates:
+                form.coordinates,
+
+              phone:
+                form.phone.trim(),
+
+              telegram:
+                form.telegram.trim(),
+
+              whatsapp:
+                form.whatsapp.trim(),
+
+              photos,
+            },
+
+            mode
+          );
+
+        console.log(
+          "[ListingCreateModal] Listing persisted:",
+          result
+        );
+
+        setPreviewOpen(
+          false
+        );
+
+        setPersisting(
+          false
+        );
+
+        onClose();
+      } catch (
+        error
+      ) {
+        console.error(
+          "[ListingCreateModal] Persist failed:",
+          error
+        );
+
+        setError(
+          error instanceof Error
+            ? error.message
+            : "Не удалось сохранить объявление."
+        );
+      } finally {
+        setPersisting(
+          false
+        );
+      }
+    };
+
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="listing-create-title"
       style={{
-        position: "fixed",
+        position:
+          "fixed",
         inset: 0,
         zIndex: 1200,
-        display: "flex",
+        display:
+          "flex",
         alignItems:
           "center",
         justifyContent:
@@ -684,8 +1111,10 @@ export default function ListingCreateModal({
           position:
             "absolute",
           inset: 0,
-          width: "100%",
-          height: "100%",
+          width:
+            "100%",
+          height:
+            "100%",
           border: 0,
           padding: 0,
           background:
@@ -705,14 +1134,18 @@ export default function ListingCreateModal({
         style={{
           position:
             "relative",
-          width: "100%",
-          maxWidth: "620px",
+          width:
+            "100%",
+          maxWidth:
+            "620px",
           maxHeight:
             "calc(100vh - 48px)",
-          overflowY: "auto",
+          overflowY:
+            "auto",
           border:
             "1px solid rgba(255,255,255,0.12)",
-          borderRadius: "24px",
+          borderRadius:
+            "24px",
           background:
             "linear-gradient(180deg, rgba(29,36,46,0.98) 0%, rgba(17,23,31,0.98) 100%)",
           boxShadow:
@@ -836,7 +1269,8 @@ export default function ListingCreateModal({
               onClick={onClose}
               aria-label="Закрыть"
               style={{
-                flexShrink: 0,
+                flexShrink:
+                  0,
                 width:
                   "36px",
                 height:
@@ -859,7 +1293,8 @@ export default function ListingCreateModal({
                   "pointer",
                 fontSize:
                   "22px",
-                lineHeight: 1,
+                lineHeight:
+                  1,
               }}
             >
               ×
@@ -1532,7 +1967,8 @@ export default function ListingCreateModal({
                               )
                             }
                             style={{
-                              border: 0,
+                              border:
+                                0,
                               borderRadius:
                                 "9px",
                               background:
@@ -1809,12 +2245,10 @@ export default function ListingCreateModal({
                                 "pointer",
                             }}
                           >
-                            {
-                              room ===
-                              5
-                                ? "5+"
-                                : room
-                            }
+                            {room ===
+                            5
+                              ? "5+"
+                              : room}
                           </button>
                         );
                       }
@@ -2433,9 +2867,13 @@ export default function ListingCreateModal({
                           ? "rgba(111,201,194,0.08)"
                           : "transparent",
                       color:
-                        "rgba(255,255,255,0.7)",
+                        form.parking
+                          ? "rgba(255,255,255,0.9)"
+                          : "rgba(255,255,255,0.58)",
                       cursor:
                         "pointer",
+                      textAlign:
+                        "left",
                     }}
                   >
                     <span
@@ -2482,9 +2920,9 @@ export default function ListingCreateModal({
                           borderRadius:
                             "50%",
                           background:
-                            "#fff",
-                          transition:
-                            "left 120ms ease",
+                            "#ffffff",
+                          boxShadow:
+                            "0 2px 6px rgba(0,0,0,0.25)",
                         }}
                       />
                     </span>
@@ -2514,21 +2952,42 @@ export default function ListingCreateModal({
                   style={{
                     marginBottom:
                       "16px",
-                    fontSize:
-                      "13px",
-                    fontWeight:
-                      650,
-                    color:
-                      "rgba(255,255,255,0.88)",
                   }}
                 >
-                  Характеристики участка
+                  <div
+                    style={{
+                      fontSize:
+                        "13px",
+                      fontWeight:
+                        650,
+                      color:
+                        "rgba(255,255,255,0.88)",
+                    }}
+                  >
+                    Характеристики участка
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop:
+                        "4px",
+                      fontSize:
+                        "11px",
+                      color:
+                        "rgba(255,255,255,0.32)",
+                    }}
+                  >
+                    Основные параметры
+                    земельного объекта.
+                  </div>
                 </div>
 
                 <div
                   style={{
                     fontSize:
                       "11px",
+                    fontWeight:
+                      500,
                     color:
                       "rgba(255,255,255,0.42)",
                     textTransform:
@@ -2580,7 +3039,7 @@ export default function ListingCreateModal({
                           }
                           style={{
                             flex:
-                              "1 1 40%",
+                              "1 1 45%",
                             minHeight:
                               "36px",
                             border:
@@ -2632,7 +3091,7 @@ export default function ListingCreateModal({
                         "8px",
                     }}
                   >
-                    Площадь, м²
+                    Площадь участка, м²
                   </div>
 
                   <input
@@ -2650,7 +3109,7 @@ export default function ListingCreateModal({
                         )
                       )
                     }
-                    placeholder="600"
+                    placeholder="1000"
                     inputMode="decimal"
                     className="h-11 w-full rounded-[12px] border border-white/10 bg-transparent px-3.5 text-[13px] text-white outline-none placeholder:text-white/25 focus:border-[#6FC9C2]"
                   />
@@ -2658,30 +3117,6 @@ export default function ListingCreateModal({
               </section>
             )}
 
-            {error && (
-              <div
-                style={{
-                  marginTop:
-                    "14px",
-                  padding:
-                    "11px 12px",
-                  border:
-                    "1px solid rgba(255,90,90,0.2)",
-                  borderRadius:
-                    "10px",
-                  background:
-                    "rgba(255,90,90,0.08)",
-                  color:
-                    "#ff9d9d",
-                  fontSize:
-                    "12px",
-                }}
-              >
-                {error}
-              </div>
-            )}
-
-            {/* Footer */}
             <div
               style={{
                 display:
@@ -2730,7 +3165,7 @@ export default function ListingCreateModal({
               <button
                 type="button"
                 onClick={
-                  handleSaveStepTwo
+                  handleContinueFromStepTwo
                 }
                 style={{
                   minWidth:
@@ -2759,8 +3194,6 @@ export default function ListingCreateModal({
                   style={{
                     marginLeft:
                       "7px",
-                    fontSize:
-                      "15px",
                   }}
                 >
                   →
@@ -2768,22 +3201,28 @@ export default function ListingCreateModal({
               </button>
             </div>
 
-            <div
-              style={{
-                marginTop:
-                  "12px",
-                fontSize:
-                  "10px",
-                lineHeight:
-                  "1.4",
-                color:
-                  "rgba(255,255,255,0.2)",
-              }}
-            >
-              {selectedOption
-                ? `Выбрано: ${selectedOption.title}. Локацию и фотографии добавим следующим шагом.`
-                : "Заполните данные объекта."}
-            </div>
+            {error && (
+              <div
+                style={{
+                  marginTop:
+                    "14px",
+                  padding:
+                    "11px 12px",
+                  border:
+                    "1px solid rgba(255,90,90,0.2)",
+                  borderRadius:
+                    "10px",
+                  background:
+                    "rgba(255,90,90,0.08)",
+                  color:
+                    "#ff9d9d",
+                  fontSize:
+                    "12px",
+                }}
+              >
+                {error}
+              </div>
+            )}
           </div>
         )}
 
@@ -2794,7 +3233,8 @@ export default function ListingCreateModal({
         {step === 3 && (
           <div
             style={{
-              padding: "24px 30px 30px",
+              padding:
+                "24px 30px 30px",
             }}
           >
             {/* Location */}
@@ -2802,21 +3242,26 @@ export default function ListingCreateModal({
               style={{
                 border:
                   "1px solid rgba(255,255,255,0.08)",
-                borderRadius: "16px",
+                borderRadius:
+                  "16px",
                 background:
                   "rgba(255,255,255,0.025)",
-                padding: "18px",
+                padding:
+                  "18px",
               }}
             >
               <div
                 style={{
-                  marginBottom: "16px",
+                  marginBottom:
+                    "16px",
                 }}
               >
                 <div
                   style={{
-                    fontSize: "13px",
-                    fontWeight: 650,
+                    fontSize:
+                      "13px",
+                    fontWeight:
+                      650,
                     color:
                       "rgba(255,255,255,0.88)",
                   }}
@@ -2826,249 +3271,323 @@ export default function ListingCreateModal({
 
                 <div
                   style={{
-                    marginTop: "4px",
-                    fontSize: "11px",
+                    marginTop:
+                      "4px",
+                    fontSize:
+                      "11px",
                     color:
                       "rgba(255,255,255,0.32)",
                   }}
                 >
-                  Точное расположение понадобится для показа объекта на карте.
+                  Точное расположение понадобится
+                  для показа объекта на карте.
                 </div>
               </div>
 
+              {/* City */}
               <div
                 style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "14px",
+                  display:
+                    "flex",
+                  flexDirection:
+                    "column",
+                  gap:
+                    "8px",
                 }}
               >
-                <div>
-                  <span
-                    style={{
-                      display: "block",
-                      fontSize: "11px",
-                      fontWeight: 500,
-                      color:
-                        "rgba(255,255,255,0.42)",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.08em",
-                    }}
+                <span
+                  style={{
+                    fontSize:
+                      "11px",
+                    fontWeight:
+                      500,
+                    color:
+                      "rgba(255,255,255,0.42)",
+                    textTransform:
+                      "uppercase",
+                    letterSpacing:
+                      "0.08em",
+                  }}
+                >
+                  Город
+                </span>
+
+                <select
+                  value={
+                    form.cityId
+                  }
+                  onChange={(
+                    event
+                  ) => {
+                    const cityId =
+                      event.target
+                        .value;
+
+                    setForm(
+                      (previous) => ({
+                        ...previous,
+                        cityId,
+                        coordinates:
+                          null,
+                        address:
+                          "",
+                        district:
+                          "",
+                      })
+                    );
+
+                    setError(null);
+                  }}
+                  className="h-11 w-full rounded-[12px] border border-white/10 bg-[#1b232d] px-3.5 text-[13px] text-white outline-none focus:border-[#6FC9C2]"
+                >
+                  <option
+                    value=""
+                    className="bg-[#1b232d]"
                   >
-                    Город
-                  </span>
+                    Выберите город
+                  </option>
 
-                  <select
-                    value={form.cityId}
-                    onChange={(event) => {
-                      const cityId =
-                        event.target.value;
-
-                      setForm(
-                        (previous) => ({
-                          ...previous,
-                          cityId,
-
-                          // Новый город = старая точка больше не актуальна
-                          coordinates: null,
-
-                          // Сбрасываем адрес от предыдущего города
-                          address: "",
-
-                          // Сбрасываем район
-                          district: "",
-                        })
-                      );
-
-                      setError(null);
-                    }}
-                    className="mt-2 h-11 w-full rounded-[12px] border border-white/10 bg-[#1d242e] px-3.5 text-[13px] text-white outline-none focus:border-[#6FC9C2]"
-                  >
-                    <option
-                      value=""
-                      className="bg-[#1d242e]"
-                    >
-                      Выберите город
-                    </option>
-
-                    {cities.map((city) => (
+                  {cities.map(
+                    (
+                      city
+                    ) => (
                       <option
-                        key={city.id}
-                        value={city.id}
-                        className="bg-[#1d242e]"
+                        key={
+                          city.id
+                        }
+                        value={
+                          city.id
+                        }
+                        className="bg-[#1b232d]"
                       >
                         {getCityDisplayName(
                           city,
                           "ru"
                         )}
                       </option>
-                    ))}
-                  </select>
-                </div>
+                    )
+                  )}
+                </select>
+              </div>
 
-                <div>
-                  <span
-                    style={{
-                      display: "block",
-                      fontSize: "11px",
-                      fontWeight: 500,
-                      color:
-                        "rgba(255,255,255,0.42)",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.08em",
-                    }}
-                  >
-                    Район
-                  </span>
-
-                  <input
-                    value={form.district}
-                    onChange={(event) =>
-                      updateForm(
-                        "district",
-                        event.target.value
-                      )
-                    }
-                    placeholder="Например: Центр"
-                    className="mt-2 h-11 w-full rounded-[12px] border border-white/10 bg-transparent px-3.5 text-[13px] text-white outline-none placeholder:text-white/25 focus:border-[#6FC9C2]"
-                  />
-                </div>
-
-                <div>
-                  <span
-                    style={{
-                      display: "block",
-                      fontSize: "11px",
-                      fontWeight: 500,
-                      color:
-                        "rgba(255,255,255,0.42)",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.08em",
-                    }}
-                  >
-                    Адрес
-                  </span>
-
-                  <input
-                    value={form.address}
-                    onChange={(event) =>
-                      updateForm(
-                        "address",
-                        event.target.value
-                      )
-                    }
-                    placeholder="Улица, дом"
-                    className="mt-2 h-11 w-full rounded-[12px] border border-white/10 bg-transparent px-3.5 text-[13px] text-white outline-none placeholder:text-white/25 focus:border-[#6FC9C2]"
-                  />
-                </div>
-
-                <div
+              {/* District */}
+              <div
+                style={{
+                  marginTop:
+                    "14px",
+                }}
+              >
+                <span
                   style={{
-                    padding: "4px",
-                    border:
-                      "1px solid rgba(255,255,255,0.07)",
-                    borderRadius: "12px",
+                    display:
+                      "block",
+                    fontSize:
+                      "11px",
+                    fontWeight:
+                      500,
+                    color:
+                      "rgba(255,255,255,0.42)",
+                    textTransform:
+                      "uppercase",
+                    letterSpacing:
+                      "0.08em",
                   }}
                 >
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setLocationPickerOpen(true)
-                    }
+                  Район
+                </span>
+
+                <input
+                  value={
+                    form.district
+                  }
+                  onChange={(
+                    event
+                  ) =>
+                    updateForm(
+                      "district",
+                      event.target
+                        .value
+                    )
+                  }
+                  placeholder="Например: Центр"
+                  className="mt-2 h-11 w-full rounded-[12px] border border-white/10 bg-transparent px-3.5 text-[13px] text-white outline-none placeholder:text-white/25 focus:border-[#6FC9C2]"
+                />
+              </div>
+
+              {/* Address */}
+              <div
+                style={{
+                  marginTop:
+                    "14px",
+                }}
+              >
+                <span
+                  style={{
+                    display:
+                      "block",
+                    fontSize:
+                      "11px",
+                    fontWeight:
+                      500,
+                    color:
+                      "rgba(255,255,255,0.42)",
+                    textTransform:
+                      "uppercase",
+                    letterSpacing:
+                      "0.08em",
+                  }}
+                >
+                  Адрес
+                </span>
+
+                <input
+                  value={
+                    form.address
+                  }
+                  onChange={(
+                    event
+                  ) =>
+                    updateForm(
+                      "address",
+                      event.target
+                        .value
+                    )
+                  }
+                  placeholder="Улица, дом"
+                  className="mt-2 h-11 w-full rounded-[12px] border border-white/10 bg-transparent px-3.5 text-[13px] text-white outline-none placeholder:text-white/25 focus:border-[#6FC9C2]"
+                />
+              </div>
+
+              {/* Map point */}
+              <button
+                type="button"
+                onClick={() =>
+                  setLocationPickerOpen(
+                    true
+                  )
+                }
+                style={{
+                  width:
+                    "100%",
+                  marginTop:
+                    "14px",
+                  minHeight:
+                    "68px",
+                  display:
+                    "flex",
+                  alignItems:
+                    "center",
+                  justifyContent:
+                    "space-between",
+                  padding:
+                    "0 16px",
+                  border:
+                    "1px solid rgba(255,255,255,0.08)",
+                  borderRadius:
+                    "14px",
+                  background:
+                    "rgba(255,255,255,0.025)",
+                  color:
+                    "#ffffff",
+                  cursor:
+                    "pointer",
+                  textAlign:
+                    "left",
+                }}
+              >
+                <div>
+                  <div
                     style={{
-                      width: "100%",
-                      minHeight: "58px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      padding: "0 12px",
-                      border: 0,
-                      borderRadius: "9px",
-                      background:
-                        form.coordinates
-                          ? "rgba(111,201,194,0.08)"
-                          : "transparent",
-                      color: "#fff",
-                      cursor: "pointer",
-                      textAlign: "left",
+                      fontSize:
+                        "12px",
+                      fontWeight:
+                        600,
                     }}
                   >
-                    <div>
-                      <div
-                        style={{
-                          fontSize: "12px",
-                          fontWeight: 600,
-                        }}
-                      >
-                        📍 Точка на карте
-                      </div>
+                    📍 Точка на карте
+                  </div>
 
-                      <div
-                        style={{
-                          marginTop: "4px",
-                          fontSize: "10px",
-                          color:
-                            "rgba(255,255,255,0.3)",
-                        }}
-                      >
-                        {form.coordinates
-                          ? `${form.coordinates[1].toFixed(5)}, ${form.coordinates[0].toFixed(5)}`
-                          : "Нажмите, чтобы указать объект на карте"}
-                      </div>
-                    </div>
-
-                    <span
-                      style={{
-                        fontSize: "14px",
-                        color: "#6FC9C2",
-                      }}
-                    >
-                      →
-                    </span>
-                  </button>
+                  <div
+                    style={{
+                      marginTop:
+                        "4px",
+                      fontSize:
+                        "10px",
+                      color:
+                        "rgba(255,255,255,0.3)",
+                    }}
+                  >
+                    {form.coordinates
+                      ? locationText
+                      : "Нажмите, чтобы указать объект на карте"}
+                  </div>
                 </div>
-              </div>
+
+                <span
+                  style={{
+                    fontSize:
+                      "14px",
+                    color:
+                      "#6FC9C2",
+                  }}
+                >
+                  →
+                </span>
+              </button>
             </section>
 
             {/* Photos */}
             <section
               style={{
-                marginTop: "10px",
+                marginTop:
+                  "10px",
                 border:
                   "1px solid rgba(255,255,255,0.08)",
-                borderRadius: "16px",
+                borderRadius:
+                  "16px",
                 background:
                   "rgba(255,255,255,0.025)",
-                padding: "18px",
+                padding:
+                  "18px",
               }}
             >
               <ListingPhotoPicker
-                photos={photos}
-                onChange={setPhotos}
+                photos={
+                  photos
+                }
+                onChange={
+                  setPhotos
+                }
               />
             </section>
 
             {/* Contacts */}
             <section
               style={{
-                marginTop: "10px",
+                marginTop:
+                  "10px",
                 border:
                   "1px solid rgba(255,255,255,0.08)",
-                borderRadius: "16px",
+                borderRadius:
+                  "16px",
                 background:
                   "rgba(255,255,255,0.025)",
-                padding: "18px",
+                padding:
+                  "18px",
               }}
             >
               <div
                 style={{
-                  marginBottom: "16px",
+                  marginBottom:
+                    "16px",
                 }}
               >
                 <div
                   style={{
-                    fontSize: "13px",
-                    fontWeight: 650,
+                    fontSize:
+                      "13px",
+                    fontWeight:
+                      650,
                     color:
                       "rgba(255,255,255,0.88)",
                   }}
@@ -3078,8 +3597,10 @@ export default function ListingCreateModal({
 
                 <div
                   style={{
-                    marginTop: "4px",
-                    fontSize: "11px",
+                    marginTop:
+                      "4px",
+                    fontSize:
+                      "11px",
                     color:
                       "rgba(255,255,255,0.32)",
                   }}
@@ -3090,17 +3611,22 @@ export default function ListingCreateModal({
 
               <div
                 style={{
-                  marginBottom: "14px",
-                  padding: "10px 12px",
+                  marginBottom:
+                    "14px",
+                  padding:
+                    "10px 12px",
                   border:
                     "1px solid rgba(111,201,194,0.10)",
-                  borderRadius: "10px",
+                  borderRadius:
+                    "10px",
                   background:
                     "rgba(111,201,194,0.04)",
                   color:
                     "rgba(255,255,255,0.38)",
-                  fontSize: "10px",
-                  lineHeight: "1.5",
+                  fontSize:
+                    "10px",
+                  lineHeight:
+                    "1.5",
                 }}
               >
                 Телефон автоматически взят из профиля. Его можно изменить для этого объявления.
@@ -3108,32 +3634,45 @@ export default function ListingCreateModal({
 
               <div
                 style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "14px",
+                  display:
+                    "flex",
+                  flexDirection:
+                    "column",
+                  gap:
+                    "14px",
                 }}
               >
                 <div>
                   <span
                     style={{
-                      display: "block",
-                      fontSize: "11px",
-                      fontWeight: 500,
+                      display:
+                        "block",
+                      fontSize:
+                        "11px",
+                      fontWeight:
+                        500,
                       color:
                         "rgba(255,255,255,0.42)",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.08em",
+                      textTransform:
+                        "uppercase",
+                      letterSpacing:
+                        "0.08em",
                     }}
                   >
                     Телефон
                   </span>
 
                   <input
-                    value={form.phone}
-                    onChange={(event) =>
+                    value={
+                      form.phone
+                    }
+                    onChange={(
+                      event
+                    ) =>
                       updateForm(
                         "phone",
-                        event.target.value
+                        event.target
+                          .value
                       )
                     }
                     placeholder="+996 ..."
@@ -3145,24 +3684,34 @@ export default function ListingCreateModal({
                 <div>
                   <span
                     style={{
-                      display: "block",
-                      fontSize: "11px",
-                      fontWeight: 500,
+                      display:
+                        "block",
+                      fontSize:
+                        "11px",
+                      fontWeight:
+                        500,
                       color:
                         "rgba(255,255,255,0.42)",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.08em",
+                      textTransform:
+                        "uppercase",
+                      letterSpacing:
+                        "0.08em",
                     }}
                   >
                     Telegram
                   </span>
 
                   <input
-                    value={form.telegram}
-                    onChange={(event) =>
+                    value={
+                      form.telegram
+                    }
+                    onChange={(
+                      event
+                    ) =>
                       updateForm(
                         "telegram",
-                        event.target.value
+                        event.target
+                          .value
                       )
                     }
                     placeholder="@username"
@@ -3173,24 +3722,34 @@ export default function ListingCreateModal({
                 <div>
                   <span
                     style={{
-                      display: "block",
-                      fontSize: "11px",
-                      fontWeight: 500,
+                      display:
+                        "block",
+                      fontSize:
+                        "11px",
+                      fontWeight:
+                        500,
                       color:
                         "rgba(255,255,255,0.42)",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.08em",
+                      textTransform:
+                        "uppercase",
+                      letterSpacing:
+                        "0.08em",
                     }}
                   >
                     WhatsApp
                   </span>
 
                   <input
-                    value={form.whatsapp}
-                    onChange={(event) =>
+                    value={
+                      form.whatsapp
+                    }
+                    onChange={(
+                      event
+                    ) =>
                       updateForm(
                         "whatsapp",
-                        event.target.value
+                        event.target
+                          .value
                       )
                     }
                     placeholder="+996 ..."
@@ -3204,16 +3763,22 @@ export default function ListingCreateModal({
             {error && (
               <div
                 style={{
-                  marginTop: "14px",
-                  padding: "11px 12px",
+                  marginTop:
+                    "14px",
+                  padding:
+                    "11px 12px",
                   border:
                     "1px solid rgba(255,90,90,0.2)",
-                  borderRadius: "10px",
+                  borderRadius:
+                    "10px",
                   background:
                     "rgba(255,90,90,0.08)",
-                  color: "#ff9d9d",
-                  fontSize: "12px",
-                  lineHeight: "1.5",
+                  color:
+                    "#ff9d9d",
+                  fontSize:
+                    "12px",
+                  lineHeight:
+                    "1.5",
                 }}
               >
                 {error}
@@ -3222,30 +3787,44 @@ export default function ListingCreateModal({
 
             <div
               style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: "14px",
-                marginTop: "24px",
+                display:
+                  "flex",
+                alignItems:
+                  "center",
+                justifyContent:
+                  "space-between",
+                gap:
+                  "14px",
+                marginTop:
+                  "24px",
               }}
             >
               <button
                 type="button"
-                onClick={handleBack}
+                onClick={
+                  handleBack
+                }
                 style={{
-                  minWidth: "100px",
-                  height: "46px",
-                  padding: "0 18px",
+                  minWidth:
+                    "100px",
+                  height:
+                    "46px",
+                  padding:
+                    "0 18px",
                   border:
                     "1px solid rgba(255,255,255,0.08)",
-                  borderRadius: "999px",
+                  borderRadius:
+                    "999px",
                   background:
                     "rgba(255,255,255,0.025)",
                   color:
                     "rgba(255,255,255,0.55)",
-                  fontSize: "13px",
-                  fontWeight: 500,
-                  cursor: "pointer",
+                  fontSize:
+                    "13px",
+                  fontWeight:
+                    500,
+                  cursor:
+                    "pointer",
                 }}
               >
                 ← Назад
@@ -3253,25 +3832,39 @@ export default function ListingCreateModal({
 
               <button
                 type="button"
-                onClick={handlePreview}
+                onClick={
+                  handlePreview
+                }
                 style={{
-                  minWidth: "160px",
-                  height: "46px",
-                  padding: "0 20px",
+                  minWidth:
+                    "160px",
+                  height:
+                    "46px",
+                  padding:
+                    "0 20px",
                   border: 0,
-                  borderRadius: "999px",
-                  background: "#6FC9C2",
-                  color: "#0a0f14",
-                  fontSize: "13px",
-                  fontWeight: 650,
-                  cursor: "pointer",
+                  borderRadius:
+                    "999px",
+                  background:
+                    "#6FC9C2",
+                  color:
+                    "#0a0f14",
+                  fontSize:
+                    "13px",
+                  fontWeight:
+                    650,
+                  cursor:
+                    "pointer",
                 }}
               >
                 Предпросмотр
+
                 <span
                   style={{
-                    marginLeft: "7px",
-                    fontSize: "15px",
+                    marginLeft:
+                      "7px",
+                    fontSize:
+                      "15px",
                   }}
                 >
                   →
@@ -3281,8 +3874,35 @@ export default function ListingCreateModal({
           </div>
         )}
 
+        {/* Preview */}
+        {previewOpen &&
+          previewData && (
+            <ListingPreview
+              data={
+                previewData
+              }
+              onBack={() =>
+                setPreviewOpen(
+                  false
+                )
+              }
+              onSaveDraft={() =>
+                handlePersistListing(
+                  "draft"
+                )
+              }
+              onPublish={() =>
+                handlePersistListing(
+                  "published"
+                )
+              }
+            />
+          )}
+
         <LocationPicker
-          open={locationPickerOpen}
+          open={
+            locationPickerOpen
+          }
 
           cityName={
             selectedCity
@@ -3312,7 +3932,6 @@ export default function ListingCreateModal({
             handleConfirmLocation
           }
         />
-
       </div>
     </div>
   );
