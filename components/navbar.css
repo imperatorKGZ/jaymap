@@ -1,0 +1,71 @@
+/* =========================================================
+   JayMap Navbar
+   Только локальные правила Navbar.
+   Никаких глобальных reset.
+   ========================================================= */
+
+.jaymap-navbar,
+.jaymap-navbar *,
+.jaymap-navbar *::before,
+.jaymap-navbar *::after {
+  box-sizing: border-box;
+}
+
+/* Каждый элемент Navbar позиционируется независимо */
+.jaymap-navbar-element {
+  position: absolute;
+  z-index: 2;
+}
+
+/* Иконки */
+.jaymap-navbar-icon {
+  display: inline-flex;
+
+  align-items: center;
+  justify-content: center;
+
+  flex: 0 0 auto;
+
+  margin: 0;
+  padding: 0;
+
+  line-height: 1;
+
+  vertical-align: middle;
+}
+
+/* SVG / IMG внутри иконок */
+.jaymap-navbar-icon svg,
+.jaymap-navbar-icon img {
+  display: block;
+
+  flex: 0 0 auto;
+
+  margin: 0;
+  padding: 0;
+}
+
+/* Поисковый текст */
+.jaymap-navbar-search-text {
+  display: inline-flex;
+
+  align-items: center;
+
+  margin: 0;
+  padding: 0;
+
+  line-height: 1;
+
+  white-space: nowrap;
+}
+
+/* Изображения профиля */
+.jaymap-navbar img {
+  display: block;
+}
+
+/* SVG */
+.jaymap-navbar svg {
+  display: block;
+  flex-shrink: 0;
+}

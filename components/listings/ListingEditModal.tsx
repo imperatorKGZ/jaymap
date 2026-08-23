@@ -1,4 +1,5 @@
 "use client";
+
 import {
   createPortal,
 } from "react-dom";
@@ -162,8 +163,10 @@ const inputClass =
 const labelClass =
   "mb-2 block text-[10px] font-medium uppercase tracking-[0.08em] text-white/40";
 
-function createEmptyForm():
-  EditForm {
+const sectionClass =
+  "rounded-[16px] border border-white/[0.08] bg-white/[0.025] p-[18px]";
+
+function createEmptyForm(): EditForm {
   return {
     title: "",
     description: "",
@@ -176,23 +179,13 @@ function createEmptyForm():
     floor: "",
     totalFloors: "",
 
-    furnished:
-      false,
+    furnished: false,
+    parking: false,
+    pets: false,
 
-    parking:
-      false,
-
-    pets:
-      false,
-
-    purpose:
-      "office",
-
-    landUse:
-      "residential",
-
-    ratePerSqm:
-      "",
+    purpose: "office",
+    landUse: "residential",
+    ratePerSqm: "",
 
     cityId: "",
     district: "",
@@ -212,14 +205,11 @@ function createEmptyForm():
 
 function parseNumber(
   value: string
-) {
+): number | null {
   const normalized =
     value
       .trim()
-      .replace(
-        /\s/g,
-        ""
-      )
+      .replace(/\s/g, "")
       .replace(
         ",",
         "."
@@ -261,12 +251,8 @@ function parseCoordinates(
       );
 
     if (
-      Number.isFinite(
-        lng
-      ) &&
-      Number.isFinite(
-        lat
-      )
+      Number.isFinite(lng) &&
+      Number.isFinite(lat)
     ) {
       return [
         lng,
@@ -279,29 +265,25 @@ function parseCoordinates(
     typeof value ===
     "string"
   ) {
-    const match =
+    const pointMatch =
       value.match(
         /POINT\s*\(\s*([-0-9.]+)\s+([-0-9.]+)\s*\)/i
       );
 
-    if (match) {
+    if (pointMatch) {
       const lng =
         Number(
-          match[1]
+          pointMatch[1]
         );
 
       const lat =
         Number(
-          match[2]
+          pointMatch[2]
         );
 
       if (
-        Number.isFinite(
-          lng
-        ) &&
-        Number.isFinite(
-          lat
-        )
+        Number.isFinite(lng) &&
+        Number.isFinite(lat)
       ) {
         return [
           lng,
@@ -330,12 +312,8 @@ function parseCoordinates(
         );
 
       if (
-        Number.isFinite(
-          lng
-        ) &&
-        Number.isFinite(
-          lat
-        )
+        Number.isFinite(lng) &&
+        Number.isFinite(lat)
       ) {
         return [
           lng,
@@ -356,33 +334,26 @@ function parseCoordinates(
         unknown
       >;
 
-    const coordinates =
-      object.coordinates;
-
     if (
       Array.isArray(
-        coordinates
+        object.coordinates
       ) &&
-      coordinates.length >=
+      object.coordinates.length >=
         2
     ) {
       const lng =
         Number(
-          coordinates[0]
+          object.coordinates[0]
         );
 
       const lat =
         Number(
-          coordinates[1]
+          object.coordinates[1]
         );
 
       if (
-        Number.isFinite(
-          lng
-        ) &&
-        Number.isFinite(
-          lat
-        )
+        Number.isFinite(lng) &&
+        Number.isFinite(lat)
       ) {
         return [
           lng,
@@ -404,12 +375,8 @@ function parseCoordinates(
       );
 
     if (
-      Number.isFinite(
-        lng
-      ) &&
-      Number.isFinite(
-        lat
-      )
+      Number.isFinite(lng) &&
+      Number.isFinite(lat)
     ) {
       return [
         lng,
@@ -423,7 +390,7 @@ function parseCoordinates(
 
 function getParams(
   listing: any
-) {
+): Record<string, unknown> {
   if (
     listing?.params &&
     typeof listing.params ===
@@ -439,6 +406,65 @@ function getParams(
   }
 
   return {};
+}
+
+function getTypeLabel(
+  type:
+    | ListingEditType
+    | null
+): string {
+  switch (type) {
+    case "rental":
+      return "Аренда";
+
+    case "commercial":
+      return "Коммерция";
+
+    case "land":
+      return "Земля";
+
+    case "daily":
+      return "Посуточно";
+
+    default:
+      return "Объявление";
+  }
+}
+
+function getPropertyTypeLabel(
+  value: string
+): string {
+  return (
+    RENTAL_PROPERTY_TYPES.find(
+      (item) =>
+        item.value ===
+        value
+    )?.label ?? ""
+  );
+}
+
+function getPurposeLabel(
+  value: string
+): string {
+  return (
+    COMMERCIAL_PURPOSES.find(
+      (item) =>
+        item.value ===
+        value
+    )?.label ?? ""
+  );
+}
+
+function getLandUseLabel(
+  value: string
+): string {
+  return (
+    LAND_USES.find(
+      (item) =>
+        item.value ===
+        value
+    )?.label ?? ""
+  );
 }
 
 export default function ListingEditModal({
@@ -472,9 +498,9 @@ export default function ListingEditModal({
   const [
     photos,
     setPhotos,
-  ] = useState<
-    EditPhoto[]
-  >([]);
+  ] = useState<EditPhoto[]>(
+    []
+  );
 
   const [
     loading,
@@ -489,9 +515,9 @@ export default function ListingEditModal({
   const [
     error,
     setError,
-  ] = useState<
-    string | null
-  >(null);
+  ] = useState<string | null>(
+    null
+  );
 
   const [
     locationOpen,
@@ -504,7 +530,10 @@ export default function ListingEditModal({
     );
 
   useEffect(() => {
-    if (!open || !listingId) {
+    if (
+      !open ||
+      !listingId
+    ) {
       return;
     }
 
@@ -513,18 +542,20 @@ export default function ListingEditModal({
 
     async function load() {
       setLoading(true);
+
       setError(null);
 
       try {
         const [
           listing,
           loadedCities,
-        ] = await Promise.all([
-          getListingById(
-            listingId!
-          ),
-          loadCities(),
-        ]);
+        ] =
+          await Promise.all([
+            getListingById(
+              listingId
+            ),
+            loadCities(),
+          ]);
 
         if (
           cancelled
@@ -720,8 +751,7 @@ export default function ListingEditModal({
     void load();
 
     return () => {
-      cancelled =
-        true;
+      cancelled = true;
     };
   }, [
     open,
@@ -782,13 +812,6 @@ export default function ListingEditModal({
       ]
     );
 
-  if (
-    !open ||
-    !listingId
-  ) {
-    return null;
-  }
-
   const updateForm = <
     K extends keyof EditForm
   >(
@@ -824,45 +847,59 @@ export default function ListingEditModal({
         title.length <
         8
       ) {
-        return "Заголовок должен содержать минимум 8 символов.";
+        return (
+          "Заголовок должен содержать минимум 8 символов."
+        );
       }
 
       if (
         price === null ||
         price <= 0
       ) {
-        return "Укажите корректную цену.";
+        return (
+          "Укажите корректную цену."
+        );
       }
 
       if (
         !form.cityId
       ) {
-        return "Выберите город.";
+        return (
+          "Выберите город."
+        );
       }
 
       if (
         !form.address.trim()
       ) {
-        return "Укажите адрес объекта.";
+        return (
+          "Укажите адрес объекта."
+        );
       }
 
       if (
         !form.coordinates
       ) {
-        return "Укажите точку объекта на карте.";
+        return (
+          "Укажите точку объекта на карте."
+        );
       }
 
       if (
         photos.length ===
         0
       ) {
-        return "Добавьте хотя бы одну фотографию.";
+        return (
+          "Добавьте хотя бы одну фотографию."
+        );
       }
 
       if (
         !form.phone.trim()
       ) {
-        return "Укажите телефон для связи.";
+        return (
+          "Укажите телефон для связи."
+        );
       }
 
       if (
@@ -874,7 +911,9 @@ export default function ListingEditModal({
         if (
           !form.propertyType
         ) {
-          return "Выберите тип жилья.";
+          return (
+            "Выберите тип жилья."
+          );
         }
 
         const rooms =
@@ -886,7 +925,9 @@ export default function ListingEditModal({
           rooms === null ||
           rooms < 1
         ) {
-          return "Укажите количество комнат.";
+          return (
+            "Укажите количество комнат."
+          );
         }
 
         const area =
@@ -898,7 +939,9 @@ export default function ListingEditModal({
           area === null ||
           area <= 0
         ) {
-          return "Укажите площадь.";
+          return (
+            "Укажите площадь."
+          );
         }
       }
 
@@ -915,13 +958,17 @@ export default function ListingEditModal({
           area === null ||
           area <= 0
         ) {
-          return "Укажите площадь помещения.";
+          return (
+            "Укажите площадь помещения."
+          );
         }
 
         if (
           !form.purpose
         ) {
-          return "Выберите назначение помещения.";
+          return (
+            "Выберите назначение помещения."
+          );
         }
       }
 
@@ -938,13 +985,17 @@ export default function ListingEditModal({
           area === null ||
           area <= 0
         ) {
-          return "Укажите площадь участка.";
+          return (
+            "Укажите площадь участка."
+          );
         }
 
         if (
           !form.landUse
         ) {
-          return "Выберите назначение земли.";
+          return (
+            "Выберите назначение земли."
+          );
         }
       }
 
@@ -969,7 +1020,9 @@ export default function ListingEditModal({
         return;
       }
 
-      setError(null);
+      setError(
+        null
+      );
 
       for (
         const file of files.slice(
@@ -983,7 +1036,7 @@ export default function ListingEditModal({
               file
             );
 
-          const nextPhoto: NewPhoto =
+          const newPhoto: NewPhoto =
             {
               type:
                 "new",
@@ -1005,7 +1058,7 @@ export default function ListingEditModal({
               previous
             ) => [
               ...previous,
-              nextPhoto,
+              newPhoto,
             ]
           );
         } catch (
@@ -1094,6 +1147,48 @@ export default function ListingEditModal({
       );
     };
 
+  const handleLocationConfirm =
+    (
+      result: {
+        coordinates:
+          [
+            number,
+            number
+          ];
+
+        address: string;
+
+        district: string;
+      }
+    ) => {
+      setForm(
+        (
+          previous
+        ) => ({
+          ...previous,
+
+          coordinates:
+            result.coordinates,
+
+          address:
+            result.address ||
+            previous.address,
+
+          district:
+            result.district ||
+            previous.district,
+        })
+      );
+
+      setLocationOpen(
+        false
+      );
+
+      setError(
+        null
+      );
+    };
+
   const handleSave =
     async () => {
       const validation =
@@ -1109,7 +1204,9 @@ export default function ListingEditModal({
         return;
       }
 
-      if (!listingId) {
+      if (
+        !listingId
+      ) {
         return;
       }
 
@@ -1263,1113 +1360,1278 @@ export default function ListingEditModal({
       }
     };
 
+  if (
+    !open ||
+    !listingId
+  ) {
+    return null;
+  }
+
+  const typeLabel =
+    getTypeLabel(
+      listingType
+    );
+
+  const cityLabel =
+    selectedCity
+      ? getCityDisplayName(
+          selectedCity,
+          "ru"
+        )
+      : "Город не выбран";
+
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto bg-black/65 p-6 backdrop-blur-md"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) {
-          onClose();
-        }
-      }}
-    >
-      <div className="relative flex max-h-[calc(100vh-32px)] w-full max-w-[680px] flex-col overflow-hidden rounded-[24px] border border-white/[0.10] bg-[#111820] shadow-[0_30px_100px_rgba(0,0,0,0.55)]">
-        {/* HEADER */}
-        <div className="flex shrink-0 items-center justify-between border-b border-white/[0.08] px-6 py-5">
-          <div>
-            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#6FC9C2]">
-              JayMap
-            </p>
+    <>
+      <div
+        className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/65 p-5 backdrop-blur-[14px]"
+        onMouseDown={(
+          event
+        ) => {
+          if (
+            event.target ===
+            event.currentTarget
+          ) {
+            onClose();
+          }
+        }}
+      >
+        <div
+          className="relative flex h-[min(780px,calc(100vh-40px))] w-full max-w-[680px] flex-col overflow-hidden rounded-[24px] border border-white/[0.10] bg-[linear-gradient(180deg,rgba(29,36,46,0.99)_0%,rgba(17,23,31,0.99)_100%)] shadow-[0_30px_100px_rgba(0,0,0,0.55)]"
+          onMouseDown={(
+            event
+          ) =>
+            event.stopPropagation()
+          }
+        >
+          {/* HEADER */}
+          <div className="shrink-0 border-b border-white/[0.08] px-7 pb-5 pt-6">
+            <div className="flex items-start justify-between gap-5">
+              <div>
+                <div className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.12em]">
+                  <span className="text-[#6FC9C2]">
+                    JayMap
+                  </span>
 
-            <h2 className="text-[21px] font-semibold tracking-[-0.02em] text-white">
-              Редактировать
-              объявление
-            </h2>
+                  <span className="h-[3px] w-[3px] rounded-full bg-white/20" />
 
-            <p className="mt-1 text-[11px] text-white/30">
-              Изменения
-              сохранятся в
-              вашем
-              объявлении.
-            </p>
+                  <span className="text-white/35">
+                    Редактирование
+                  </span>
+                </div>
+
+                <h2 className="text-[24px] font-bold tracking-[-0.025em] text-white">
+                  Редактировать объявление
+                </h2>
+
+                <p className="mt-2 max-w-[470px] text-[12px] leading-5 text-white/40">
+                  Измените данные объекта.
+                  Все изменения будут
+                  сохранены в вашем
+                  объявлении.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                disabled={
+                  saving
+                }
+                onClick={
+                  onClose
+                }
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/[0.09] bg-white/[0.04] text-[21px] leading-none text-white/55 transition hover:bg-white/[0.08] hover:text-white disabled:opacity-40"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* TYPE / STATUS LINE */}
+            <div className="mt-5 flex items-center gap-2">
+              <span className="rounded-full border border-[#6FC9C2]/20 bg-[#6FC9C2]/[0.08] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.08em] text-[#6FC9C2]">
+                {typeLabel}
+              </span>
+
+              <span className="text-[10px] text-white/25">
+                {cityLabel}
+              </span>
+            </div>
           </div>
 
-          <button
-            type="button"
-            disabled={
-              saving
-            }
-            onClick={
-              onClose
-            }
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.035] text-[20px] text-white/50 transition hover:bg-white/[0.07] hover:text-white disabled:opacity-40"
-          >
-            ×
-          </button>
-        </div>
+          {/* BODY */}
+          <div className="sb-scroll min-h-0 flex-1 overflow-y-auto px-7 py-5">
+            {loading ? (
+              <div className="space-y-2.5">
+                <div className="h-[170px] animate-pulse rounded-[16px] bg-white/[0.04]" />
+                <div className="h-[220px] animate-pulse rounded-[16px] bg-white/[0.04]" />
+                <div className="h-[220px] animate-pulse rounded-[16px] bg-white/[0.04]" />
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {/* PHOTOS */}
+                <section
+                  className={
+                    sectionClass
+                  }
+                >
+                  <div className="flex items-end justify-between gap-4">
+                    <div>
+                      <div className="text-[13px] font-semibold text-white/88">
+                        Фотографии
+                      </div>
 
-        {/* BODY */}
-        <div className="sb-scroll min-h-0 flex-1 overflow-y-auto px-6 py-5">
-          {loading ? (
-            <div className="space-y-3">
-              {[
-                1,
-                2,
-                3,
-                4,
-                5,
-              ].map(
-                (
-                  item
-                ) => (
-                  <div
-                    key={
-                      item
-                    }
-                    className="h-12 animate-pulse rounded-xl bg-white/[0.04]"
-                  />
-                )
-              )}
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {/* PHOTOS */}
-              <section className="rounded-2xl border border-white/[0.08] bg-white/[0.018] p-4">
-                <div className="flex items-end justify-between">
+                      <div className="mt-1 text-[10px] text-white/30">
+                        Первая фотография —
+                        обложка.
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={
+                        saving ||
+                        photos.length >=
+                          12
+                      }
+                      onClick={() =>
+                        fileInputRef.current?.click()
+                      }
+                      className="h-9 rounded-[10px] border border-white/[0.08] bg-white/[0.025] px-3.5 text-[11px] font-medium text-white/60 transition hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+                    >
+                      + Добавить
+                    </button>
+
+                    <input
+                      ref={
+                        fileInputRef
+                      }
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      multiple
+                      hidden
+                      onChange={(
+                        event
+                      ) => {
+                        const files =
+                          Array.from(
+                            event.target.files ??
+                              []
+                          );
+
+                        event.target.value =
+                          "";
+
+                        void handleAddPhotos(
+                          files
+                        );
+                      }}
+                    />
+                  </div>
+
+                  {photos.length >
+                  0 ? (
+                    <div className="mt-4 grid grid-cols-4 gap-2">
+                      {photos.map(
+                        (
+                          photo,
+                          index
+                        ) => {
+                          const src =
+                            photo.type ===
+                            "existing"
+                              ? photo.url
+                              : photo.previewUrl;
+
+                          return (
+                            <div
+                              key={
+                                photo.id
+                              }
+                              className="group relative aspect-square overflow-hidden rounded-[12px] border border-white/[0.08] bg-white/[0.03]"
+                            >
+                              <img
+                                src={src}
+                                alt=""
+                                className="h-full w-full object-cover"
+                              />
+
+                              {index ===
+                                0 && (
+                                <span className="absolute left-2 top-2 rounded-full bg-[#6FC9C2] px-2 py-1 text-[8px] font-bold uppercase tracking-[0.05em] text-[#0a0f14]">
+                                  Обложка
+                                </span>
+                              )}
+
+                              <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/80 to-transparent p-2 pt-7 opacity-0 transition group-hover:opacity-100">
+                                <div className="flex gap-1">
+                                  <button
+                                    type="button"
+                                    disabled={
+                                      index ===
+                                        0 ||
+                                      saving
+                                    }
+                                    onClick={() =>
+                                      handleMovePhoto(
+                                        index,
+                                        "left"
+                                      )
+                                    }
+                                    className="flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-[11px] text-white/80 disabled:opacity-20"
+                                  >
+                                    ←
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    disabled={
+                                      index ===
+                                        photos.length -
+                                          1 ||
+                                      saving
+                                    }
+                                    onClick={() =>
+                                      handleMovePhoto(
+                                        index,
+                                        "right"
+                                      )
+                                    }
+                                    className="flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-[11px] text-white/80 disabled:opacity-20"
+                                  >
+                                    →
+                                  </button>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  disabled={
+                                    saving
+                                  }
+                                  onClick={() =>
+                                    handleRemovePhoto(
+                                      photo
+                                    )
+                                  }
+                                  className="flex h-7 w-7 items-center justify-center rounded-full bg-red-500/70 text-[12px] text-white disabled:opacity-30"
+                                >
+                                  ×
+                                </button>
+                              </div>
+
+                              <span className="absolute bottom-2 left-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/55 text-[9px] font-semibold text-white/85">
+                                {index +
+                                  1}
+                              </span>
+                            </div>
+                          );
+                        }
+                      )}
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        fileInputRef.current?.click()
+                      }
+                      className="mt-4 flex min-h-[140px] w-full items-center justify-center rounded-[12px] border border-dashed border-white/[0.10] bg-white/[0.01] text-center transition hover:bg-white/[0.025]"
+                    >
+                      <div>
+                        <div className="text-[12px] font-medium text-white/45">
+                          Нет фотографий
+                        </div>
+
+                        <div className="mt-1 text-[10px] text-[#6FC9C2]">
+                          Добавить фотографии
+                        </div>
+                      </div>
+                    </button>
+                  )}
+
+                  <div className="mt-2 text-right text-[9px] text-white/20">
+                    {photos.length} / 12
+                  </div>
+                </section>
+
+                {/* BASIC */}
+                <section
+                  className={
+                    sectionClass
+                  }
+                >
                   <div>
-                    <p className="text-[13px] font-semibold text-white/85">
-                      Фотографии
-                    </p>
+                    <div className="text-[13px] font-semibold text-white/88">
+                      Основная информация
+                    </div>
 
-                    <p className="mt-1 text-[10px] text-white/25">
-                      Первая
-                      фотография —
-                      обложка.
-                    </p>
+                    <div className="mt-1 text-[10px] text-white/30">
+                      Данные, которые будут
+                      видны в карточке
+                      объявления.
+                    </div>
+                  </div>
+
+                  <div className="mt-5">
+                    <label
+                      className={
+                        labelClass
+                      }
+                    >
+                      Заголовок
+                    </label>
+
+                    <input
+                      value={
+                        form.title
+                      }
+                      onChange={(
+                        event
+                      ) =>
+                        updateForm(
+                          "title",
+                          event.target.value
+                        )
+                      }
+                      maxLength={120}
+                      className={
+                        inputClass
+                      }
+                    />
+                  </div>
+
+                  <div className="mt-4">
+                    <label
+                      className={
+                        labelClass
+                      }
+                    >
+                      Описание
+                    </label>
+
+                    <div className="mb-2 flex justify-end text-[9px] text-white/20">
+                      {
+                        form.description
+                          .length
+                      }
+                      /2000
+                    </div>
+
+                    <textarea
+                      value={
+                        form.description
+                      }
+                      onChange={(
+                        event
+                      ) =>
+                        updateForm(
+                          "description",
+                          event.target.value
+                        )
+                      }
+                      rows={5}
+                      maxLength={2000}
+                      className="w-full resize-none rounded-[12px] border border-white/10 bg-transparent px-3.5 py-3 text-[13px] leading-5 text-white outline-none placeholder:text-white/25 focus:border-[#6FC9C2]"
+                    />
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-[1fr_120px] gap-2.5">
+                    <div>
+                      <label
+                        className={
+                          labelClass
+                        }
+                      >
+                        Цена
+                      </label>
+
+                      <input
+                        value={
+                          form.price
+                        }
+                        onChange={(
+                          event
+                        ) =>
+                          updateForm(
+                            "price",
+                            event.target.value.replace(
+                              /[^\d\s.,]/g,
+                              ""
+                            )
+                          )
+                        }
+                        inputMode="decimal"
+                        className={
+                          inputClass
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <label
+                        className={
+                          labelClass
+                        }
+                      >
+                        Валюта
+                      </label>
+
+                      <div className="flex h-11 gap-1 rounded-[12px] bg-white/[0.035] p-1">
+                        {[
+                          "KGS",
+                          "USD",
+                        ].map(
+                          (
+                            currency
+                          ) => {
+                            const active =
+                              form.currency ===
+                              currency;
+
+                            return (
+                              <button
+                                key={
+                                  currency
+                                }
+                                type="button"
+                                onClick={() =>
+                                  updateForm(
+                                    "currency",
+                                    currency
+                                  )
+                                }
+                                className={[
+                                  "flex-1 rounded-[9px] text-[10px] font-semibold transition",
+                                  active
+                                    ? "bg-[#6FC9C2] text-[#0a0f14]"
+                                    : "text-white/40 hover:text-white/70",
+                                ].join(
+                                  " "
+                                )}
+                              >
+                                {
+                                  currency
+                                }
+                              </button>
+                            );
+                          }
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {/* RESIDENTIAL */}
+                {(
+                  listingType ===
+                    "rental" ||
+                  listingType ===
+                    "daily"
+                ) && (
+                  <section
+                    className={
+                      sectionClass
+                    }
+                  >
+                    <div className="text-[13px] font-semibold text-white/88">
+                      Характеристики жилья
+                    </div>
+
+                    <div className="mt-1 text-[10px] text-white/30">
+                      Основные параметры
+                      квартиры, дома или
+                      комнаты.
+                    </div>
+
+                    <div className="mt-5">
+                      <label
+                        className={
+                          labelClass
+                        }
+                      >
+                        Тип жилья
+                      </label>
+
+                      <div className="flex gap-1 rounded-[12px] bg-white/[0.035] p-1">
+                        {RENTAL_PROPERTY_TYPES.map(
+                          (
+                            option
+                          ) => {
+                            const active =
+                              form.propertyType ===
+                              option.value;
+
+                            return (
+                              <button
+                                key={
+                                  option.value
+                                }
+                                type="button"
+                                onClick={() =>
+                                  updateForm(
+                                    "propertyType",
+                                    option.value
+                                  )
+                                }
+                                className={[
+                                  "min-h-[38px] flex-1 rounded-[9px] text-[11px] font-medium transition",
+                                  active
+                                    ? "bg-[#6FC9C2] text-[#0a0f14]"
+                                    : "text-white/45 hover:text-white/70",
+                                ].join(
+                                  " "
+                                )}
+                              >
+                                {
+                                  option.label
+                                }
+                              </button>
+                            );
+                          }
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-4">
+                      <label
+                        className={
+                          labelClass
+                        }
+                      >
+                        Комнаты
+                      </label>
+
+                      <div className="flex gap-1 rounded-[12px] bg-white/[0.035] p-1">
+                        {[
+                          "1",
+                          "2",
+                          "3",
+                          "4",
+                          "5",
+                        ].map(
+                          (
+                            room
+                          ) => {
+                            const active =
+                              form.rooms ===
+                              room;
+
+                            return (
+                              <button
+                                key={
+                                  room
+                                }
+                                type="button"
+                                onClick={() =>
+                                  updateForm(
+                                    "rooms",
+                                    room
+                                  )
+                                }
+                                className={[
+                                  "min-h-[38px] flex-1 rounded-[9px] text-[11px] font-medium transition",
+                                  active
+                                    ? "bg-[#6FC9C2] text-[#0a0f14]"
+                                    : "text-white/45 hover:text-white/70",
+                                ].join(
+                                  " "
+                                )}
+                              >
+                                {room ===
+                                "5"
+                                  ? "5+"
+                                  : room}
+                              </button>
+                            );
+                          }
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-2 gap-2.5">
+                      <div>
+                        <label
+                          className={
+                            labelClass
+                          }
+                        >
+                          Площадь, м²
+                        </label>
+
+                        <input
+                          value={
+                            form.area
+                          }
+                          onChange={(
+                            event
+                          ) =>
+                            updateForm(
+                              "area",
+                              event.target.value.replace(
+                                /[^\d\s.,]/g,
+                                ""
+                              )
+                            )
+                          }
+                          inputMode="decimal"
+                          className={
+                            inputClass
+                          }
+                        />
+                      </div>
+
+                      <div>
+                        <label
+                          className={
+                            labelClass
+                          }
+                        >
+                          Этаж
+                        </label>
+
+                        <input
+                          value={
+                            form.floor
+                          }
+                          onChange={(
+                            event
+                          ) =>
+                            updateForm(
+                              "floor",
+                              event.target.value.replace(
+                                /\D/g,
+                                ""
+                              )
+                            )
+                          }
+                          inputMode="numeric"
+                          className={
+                            inputClass
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-4">
+                      <label
+                        className={
+                          labelClass
+                        }
+                      >
+                        Этажность дома
+                      </label>
+
+                      <input
+                        value={
+                          form.totalFloors
+                        }
+                        onChange={(
+                          event
+                        ) =>
+                          updateForm(
+                            "totalFloors",
+                            event.target.value.replace(
+                              /\D/g,
+                              ""
+                            )
+                          )
+                        }
+                        inputMode="numeric"
+                        className={
+                          inputClass
+                        }
+                      />
+                    </div>
+
+                    <div className="mt-4 overflow-hidden rounded-[12px] border border-white/[0.07]">
+                      {[
+                        {
+                          key:
+                            "furnished" as const,
+                          label:
+                            "С мебелью",
+                        },
+                        {
+                          key:
+                            "parking" as const,
+                          label:
+                            "Парковка",
+                        },
+                        {
+                          key:
+                            "pets" as const,
+                          label:
+                            "Можно с животными",
+                        },
+                      ].map(
+                        (
+                          item,
+                          index
+                        ) => {
+                          const active =
+                            form[
+                              item.key
+                            ];
+
+                          return (
+                            <button
+                              key={
+                                item.key
+                              }
+                              type="button"
+                              onClick={() =>
+                                updateForm(
+                                  item.key,
+                                  !active
+                                )
+                              }
+                              className={[
+                                "flex min-h-[44px] w-full items-center justify-between px-3 text-left transition",
+                                index >
+                                0
+                                  ? "border-t border-white/[0.06]"
+                                  : "",
+                                active
+                                  ? "bg-[#6FC9C2]/[0.05]"
+                                  : "bg-transparent",
+                              ].join(
+                                " "
+                              )}
+                            >
+                              <span className="text-[12px] font-medium text-white/65">
+                                {
+                                  item.label
+                                }
+                              </span>
+
+                              <span
+                                className={[
+                                  "relative h-6 w-10 rounded-full transition",
+                                  active
+                                    ? "bg-[#6FC9C2]"
+                                    : "bg-white/10",
+                                ].join(
+                                  " "
+                                )}
+                              >
+                                <span
+                                  className={[
+                                    "absolute top-1 h-4 w-4 rounded-full bg-white shadow-[0_2px_6px_rgba(0,0,0,0.25)] transition-all",
+                                    active
+                                      ? "left-5"
+                                      : "left-1",
+                                  ].join(
+                                    " "
+                                  )}
+                                />
+                              </span>
+                            </button>
+                          );
+                        }
+                      )}
+                    </div>
+                  </section>
+                )}
+
+                {/* COMMERCIAL */}
+                {listingType ===
+                  "commercial" && (
+                  <section
+                    className={
+                      sectionClass
+                    }
+                  >
+                    <div className="text-[13px] font-semibold text-white/88">
+                      Характеристики коммерции
+                    </div>
+
+                    <div className="mt-5">
+                      <label
+                        className={
+                          labelClass
+                        }
+                      >
+                        Назначение
+                      </label>
+
+                      <div className="flex flex-wrap gap-1 rounded-[12px] bg-white/[0.035] p-1">
+                        {COMMERCIAL_PURPOSES.map(
+                          (
+                            option
+                          ) => {
+                            const active =
+                              form.purpose ===
+                              option.value;
+
+                            return (
+                              <button
+                                key={
+                                  option.value
+                                }
+                                type="button"
+                                onClick={() =>
+                                  updateForm(
+                                    "purpose",
+                                    option.value
+                                  )
+                                }
+                                className={[
+                                  "min-h-[38px] flex-[1_1_30%] rounded-[9px] text-[11px] font-medium transition",
+                                  active
+                                    ? "bg-[#6FC9C2] text-[#0a0f14]"
+                                    : "text-white/45 hover:text-white/70",
+                                ].join(
+                                  " "
+                                )}
+                              >
+                                {
+                                  option.label
+                                }
+                              </button>
+                            );
+                          }
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-2 gap-2.5">
+                      <div>
+                        <label
+                          className={
+                            labelClass
+                          }
+                        >
+                          Площадь, м²
+                        </label>
+
+                        <input
+                          value={
+                            form.area
+                          }
+                          onChange={(
+                            event
+                          ) =>
+                            updateForm(
+                              "area",
+                              event.target.value.replace(
+                                /[^\d\s.,]/g,
+                                ""
+                              )
+                            )
+                          }
+                          inputMode="decimal"
+                          className={
+                            inputClass
+                          }
+                        />
+                      </div>
+
+                      <div>
+                        <label
+                          className={
+                            labelClass
+                          }
+                        >
+                          Этаж
+                        </label>
+
+                        <input
+                          value={
+                            form.floor
+                          }
+                          onChange={(
+                            event
+                          ) =>
+                            updateForm(
+                              "floor",
+                              event.target.value.replace(
+                                /\D/g,
+                                ""
+                              )
+                            )
+                          }
+                          inputMode="numeric"
+                          className={
+                            inputClass
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-4">
+                      <label
+                        className={
+                          labelClass
+                        }
+                      >
+                        Цена за м²
+                      </label>
+
+                      <input
+                        value={
+                          form.ratePerSqm
+                        }
+                        onChange={(
+                          event
+                        ) =>
+                          updateForm(
+                            "ratePerSqm",
+                            event.target.value.replace(
+                              /[^\d\s.,]/g,
+                              ""
+                            )
+                          )
+                        }
+                        inputMode="decimal"
+                        className={
+                          inputClass
+                        }
+                      />
+                    </div>
+
+                    <div className="mt-4 overflow-hidden rounded-[12px] border border-white/[0.07]">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateForm(
+                            "parking",
+                            !form.parking
+                          )
+                        }
+                        className={[
+                          "flex min-h-[44px] w-full items-center justify-between px-3 text-left transition",
+                          form.parking
+                            ? "bg-[#6FC9C2]/[0.05]"
+                            : "",
+                        ].join(
+                          " "
+                        )}
+                      >
+                        <span className="text-[12px] font-medium text-white/65">
+                          Парковка
+                        </span>
+
+                        <span
+                          className={[
+                            "relative h-6 w-10 rounded-full transition",
+                            form.parking
+                              ? "bg-[#6FC9C2]"
+                              : "bg-white/10",
+                          ].join(
+                            " "
+                          )}
+                        >
+                          <span
+                            className={[
+                              "absolute top-1 h-4 w-4 rounded-full bg-white shadow-[0_2px_6px_rgba(0,0,0,0.25)]",
+                              form.parking
+                                ? "left-5"
+                                : "left-1",
+                            ].join(
+                              " "
+                            )}
+                          />
+                        </span>
+                      </button>
+                    </div>
+                  </section>
+                )}
+
+                {/* LAND */}
+                {listingType ===
+                  "land" && (
+                  <section
+                    className={
+                      sectionClass
+                    }
+                  >
+                    <div className="text-[13px] font-semibold text-white/88">
+                      Характеристики участка
+                    </div>
+
+                    <div className="mt-1 text-[10px] text-white/30">
+                      Основные параметры
+                      земельного объекта.
+                    </div>
+
+                    <div className="mt-5">
+                      <label
+                        className={
+                          labelClass
+                        }
+                      >
+                        Назначение земли
+                      </label>
+
+                      <div className="flex flex-wrap gap-1 rounded-[12px] bg-white/[0.035] p-1">
+                        {LAND_USES.map(
+                          (
+                            option
+                          ) => {
+                            const active =
+                              form.landUse ===
+                              option.value;
+
+                            return (
+                              <button
+                                key={
+                                  option.value
+                                }
+                                type="button"
+                                onClick={() =>
+                                  updateForm(
+                                    "landUse",
+                                    option.value
+                                  )
+                                }
+                                className={[
+                                  "min-h-[38px] flex-[1_1_45%] rounded-[9px] text-[11px] font-medium transition",
+                                  active
+                                    ? "bg-[#6FC9C2] text-[#0a0f14]"
+                                    : "text-white/45 hover:text-white/70",
+                                ].join(
+                                  " "
+                                )}
+                              >
+                                {
+                                  option.label
+                                }
+                              </button>
+                            );
+                          }
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-4">
+                      <label
+                        className={
+                          labelClass
+                        }
+                      >
+                        Площадь участка,
+                        м²
+                      </label>
+
+                      <input
+                        value={
+                          form.area
+                        }
+                        onChange={(
+                          event
+                        ) =>
+                          updateForm(
+                            "area",
+                            event.target.value.replace(
+                              /[^\d\s.,]/g,
+                              ""
+                            )
+                          )
+                        }
+                        inputMode="decimal"
+                        className={
+                          inputClass
+                        }
+                      />
+                    </div>
+                  </section>
+                )}
+
+                {/* LOCATION */}
+                <section
+                  className={
+                    sectionClass
+                  }
+                >
+                  <div>
+                    <div className="text-[13px] font-semibold text-white/88">
+                      Локация
+                    </div>
+
+                    <div className="mt-1 text-[10px] text-white/30">
+                      Точное расположение
+                      объекта на карте.
+                    </div>
+                  </div>
+
+                  <div className="mt-5">
+                    <label
+                      className={
+                        labelClass
+                      }
+                    >
+                      Город
+                    </label>
+
+                    <select
+                      value={
+                        form.cityId
+                      }
+                      onChange={(
+                        event
+                      ) => {
+                        const cityId =
+                          event.target
+                            .value;
+
+                        setForm(
+                          (
+                            previous
+                          ) => ({
+                            ...previous,
+                            cityId,
+                            coordinates:
+                              null,
+                            address:
+                              "",
+                            district:
+                              "",
+                          })
+                        );
+
+                        setError(
+                          null
+                        );
+                      }}
+                      className="h-11 w-full rounded-[12px] border border-white/10 bg-[#1b232d] px-3.5 text-[13px] text-white outline-none focus:border-[#6FC9C2]"
+                    >
+                      <option
+                        value=""
+                        className="bg-[#1b232d]"
+                      >
+                        Выберите город
+                      </option>
+
+                      {cities.map(
+                        (
+                          city
+                        ) => (
+                          <option
+                            key={
+                              city.id
+                            }
+                            value={
+                              city.id
+                            }
+                            className="bg-[#1b232d]"
+                          >
+                            {getCityDisplayName(
+                              city,
+                              "ru"
+                            )}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </div>
+
+                  <div className="mt-4">
+                    <label
+                      className={
+                        labelClass
+                      }
+                    >
+                      Район
+                    </label>
+
+                    <input
+                      value={
+                        form.district
+                      }
+                      onChange={(
+                        event
+                      ) =>
+                        updateForm(
+                          "district",
+                          event.target.value
+                        )
+                      }
+                      placeholder="Например: Центр"
+                      className={
+                        inputClass
+                      }
+                    />
+                  </div>
+
+                  <div className="mt-4">
+                    <label
+                      className={
+                        labelClass
+                      }
+                    >
+                      Адрес
+                    </label>
+
+                    <input
+                      value={
+                        form.address
+                      }
+                      onChange={(
+                        event
+                      ) =>
+                        updateForm(
+                          "address",
+                          event.target.value
+                        )
+                      }
+                      placeholder="Улица, дом"
+                      className={
+                        inputClass
+                      }
+                    />
                   </div>
 
                   <button
                     type="button"
                     disabled={
                       saving ||
-                      photos.length >=
-                        12
+                      !form.cityId
                     }
                     onClick={() =>
-                      fileInputRef.current?.click()
-                    }
-                    className="rounded-lg border border-white/[0.08] px-3 py-2 text-[10px] font-medium text-white/55 transition hover:bg-white/[0.05] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    + Добавить
-                  </button>
-
-                  <input
-                    ref={
-                      fileInputRef
-                    }
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    multiple
-                    hidden
-                    onChange={(
-                      event
-                    ) => {
-                      const files =
-                        Array.from(
-                          event.target.files ??
-                            []
-                        );
-
-                      event.target.value =
-                        "";
-
-                      void handleAddPhotos(
-                        files
-                      );
-                    }}
-                  />
-                </div>
-
-                {photos.length >
-                0 ? (
-                  <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-4">
-                    {photos.map(
-                      (
-                        photo,
-                        index
-                      ) => {
-                        const src =
-                          photo.type ===
-                          "existing"
-                            ? photo.url
-                            : photo.previewUrl;
-
-                        return (
-                          <div
-                            key={
-                              photo.id
-                            }
-                            className="group relative aspect-square overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03]"
-                          >
-                            <img
-                              src={
-                                src
-                              }
-                              alt=""
-                              className="h-full w-full object-cover"
-                            />
-
-                            {index ===
-                              0 && (
-                              <span className="absolute left-2 top-2 rounded-full bg-[#6FC9C2] px-2 py-1 text-[8px] font-bold uppercase tracking-[0.05em] text-[#0a0f14]">
-                                Обложка
-                              </span>
-                            )}
-
-                            <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/80 to-transparent p-2 pt-8 opacity-0 transition group-hover:opacity-100">
-                              <div className="flex gap-1">
-                                <button
-                                  type="button"
-                                  disabled={
-                                    index ===
-                                      0 ||
-                                    saving
-                                  }
-                                  onClick={() =>
-                                    handleMovePhoto(
-                                      index,
-                                      "left"
-                                    )
-                                  }
-                                  className="flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-[11px] text-white/80 disabled:opacity-20"
-                                >
-                                  ←
-                                </button>
-
-                                <button
-                                  type="button"
-                                  disabled={
-                                    index ===
-                                      photos.length -
-                                        1 ||
-                                    saving
-                                  }
-                                  onClick={() =>
-                                    handleMovePhoto(
-                                      index,
-                                      "right"
-                                    )
-                                  }
-                                  className="flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-[11px] text-white/80 disabled:opacity-20"
-                                >
-                                  →
-                                </button>
-                              </div>
-
-                              <button
-                                type="button"
-                                disabled={
-                                  saving
-                                }
-                                onClick={() =>
-                                  handleRemovePhoto(
-                                    photo
-                                  )
-                                }
-                                className="flex h-7 w-7 items-center justify-center rounded-full bg-red-500/70 text-[12px] text-white disabled:opacity-30"
-                              >
-                                ×
-                              </button>
-                            </div>
-
-                            <span className="absolute bottom-2 left-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/55 text-[9px] font-semibold text-white/80">
-                              {index +
-                                1}
-                            </span>
-                          </div>
-                        );
-                      }
-                    )}
-                  </div>
-                ) : (
-                  <div className="mt-4 flex min-h-[150px] items-center justify-center rounded-xl border border-dashed border-white/[0.10] text-center">
-                    <div>
-                      <p className="text-[12px] font-medium text-white/45">
-                        Нет фотографий
-                      </p>
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          fileInputRef.current?.click()
-                        }
-                        className="mt-2 text-[11px] font-medium text-[#6FC9C2]"
-                      >
-                        Добавить
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </section>
-
-              {/* BASIC */}
-              <section className="rounded-2xl border border-white/[0.08] bg-white/[0.018] p-4">
-                <p className="text-[13px] font-semibold text-white/85">
-                  Основная
-                  информация
-                </p>
-
-                <div className="mt-4">
-                  <label
-                    className={
-                      labelClass
-                    }
-                  >
-                    Заголовок
-                  </label>
-
-                  <input
-                    value={
-                      form.title
-                    }
-                    onChange={(
-                      event
-                    ) =>
-                      updateForm(
-                        "title",
-                        event.target.value
+                      setLocationOpen(
+                        true
                       )
                     }
-                    maxLength={
-                      120
-                    }
-                    className={
-                      inputClass
-                    }
-                  />
-                </div>
-
-                <div className="mt-4">
-                  <label
-                    className={
-                      labelClass
-                    }
+                    className="mt-4 flex min-h-[70px] w-full items-center justify-between rounded-[14px] border border-white/[0.08] bg-white/[0.018] px-4 text-left transition hover:border-[#6FC9C2]/30 hover:bg-white/[0.03] disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    Описание
-                  </label>
-
-                  <textarea
-                    value={
-                      form.description
-                    }
-                    onChange={(
-                      event
-                    ) =>
-                      updateForm(
-                        "description",
-                        event.target.value
-                      )
-                    }
-                    rows={5}
-                    maxLength={
-                      2000
-                    }
-                    className="w-full resize-none rounded-[12px] border border-white/10 bg-transparent px-3.5 py-3 text-[13px] leading-5 text-white outline-none placeholder:text-white/25 focus:border-[#6FC9C2]"
-                  />
-                </div>
-
-                <div className="mt-4 grid grid-cols-[1fr_120px] gap-3">
-                  <div>
-                    <label
-                      className={
-                        labelClass
-                      }
-                    >
-                      Цена
-                    </label>
-
-                    <input
-                      value={
-                        form.price
-                      }
-                      onChange={(
-                        event
-                      ) =>
-                        updateForm(
-                          "price",
-                          event.target.value.replace(
-                            /[^\d\s.,]/g,
-                            ""
-                          )
-                        )
-                      }
-                      inputMode="decimal"
-                      className={
-                        inputClass
-                      }
-                    />
-                  </div>
-
-                  <div>
-                    <label
-                      className={
-                        labelClass
-                      }
-                    >
-                      Валюта
-                    </label>
-
-                    <select
-                      value={
-                        form.currency
-                      }
-                      onChange={(
-                        event
-                      ) =>
-                        updateForm(
-                          "currency",
-                          event.target.value
-                        )
-                      }
-                      className="h-11 w-full rounded-[12px] border border-white/10 bg-[#18212a] px-3 text-[12px] text-white outline-none focus:border-[#6FC9C2]"
-                    >
-                      <option
-                        value="KGS"
-                        className="bg-[#18212a]"
-                      >
-                        KGS
-                      </option>
-
-                      <option
-                        value="USD"
-                        className="bg-[#18212a]"
-                      >
-                        USD
-                      </option>
-
-                      <option
-                        value="EUR"
-                        className="bg-[#18212a]"
-                      >
-                        EUR
-                      </option>
-                    </select>
-                  </div>
-                </div>
-              </section>
-
-              {/* TYPE-SPECIFIC */}
-              {listingType ===
-                "rental" ||
-              listingType ===
-                "daily" ? (
-                <section className="rounded-2xl border border-white/[0.08] bg-white/[0.018] p-4">
-                  <p className="text-[13px] font-semibold text-white/85">
-                    Характеристики
-                  </p>
-
-                  <div className="mt-4">
-                    <label
-                      className={
-                        labelClass
-                      }
-                    >
-                      Тип жилья
-                    </label>
-
-                    <div className="grid grid-cols-3 gap-1 rounded-xl bg-white/[0.035] p-1">
-                      {RENTAL_PROPERTY_TYPES.map(
-                        (
-                          option
-                        ) => {
-                          const active =
-                            form.propertyType ===
-                            option.value;
-
-                          return (
-                            <button
-                              key={
-                                option.value
-                              }
-                              type="button"
-                              onClick={() =>
-                                updateForm(
-                                  "propertyType",
-                                  option.value
-                                )
-                              }
-                              className={[
-                                "min-h-[36px] rounded-lg text-[11px] font-semibold transition",
-                                active
-                                  ? "bg-[#6FC9C2] text-[#0a0f14]"
-                                  : "text-white/45 hover:bg-white/[0.04] hover:text-white",
-                              ].join(
-                                " "
-                              )}
-                            >
-                              {
-                                option.label
-                              }
-                            </button>
-                          );
-                        }
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="mt-4">
-                    <label
-                      className={
-                        labelClass
-                      }
-                    >
-                      Комнаты
-                    </label>
-
-                    <div className="grid grid-cols-5 gap-1 rounded-xl bg-white/[0.035] p-1">
-                      {[1, 2, 3, 4, 5].map(
-                        (
-                          room
-                        ) => {
-                          const active =
-                            form.rooms ===
-                            String(
-                              room
-                            );
-
-                          return (
-                            <button
-                              key={
-                                room
-                              }
-                              type="button"
-                              onClick={() =>
-                                updateForm(
-                                  "rooms",
-                                  String(
-                                    room
-                                  )
-                                )
-                              }
-                              className={[
-                                "min-h-[36px] rounded-lg text-[11px] font-semibold transition",
-                                active
-                                  ? "bg-[#6FC9C2] text-[#0a0f14]"
-                                  : "text-white/45 hover:bg-white/[0.04] hover:text-white",
-                              ].join(
-                                " "
-                              )}
-                            >
-                              {room ===
-                              5
-                                ? "5+"
-                                : room}
-                            </button>
-                          );
-                        }
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="mt-4 grid grid-cols-2 gap-3">
                     <div>
-                      <label
-                        className={
-                          labelClass
-                        }
-                      >
-                        Площадь, м²
-                      </label>
+                      <div className="text-[12px] font-semibold text-white/85">
+                        📍 Точка на
+                        карте
+                      </div>
 
-                      <input
-                        value={
-                          form.area
-                        }
-                        onChange={(
-                          event
-                        ) =>
-                          updateForm(
-                            "area",
-                            event.target.value.replace(
-                              /[^\d\s.,]/g,
-                              ""
-                            )
-                          )
-                        }
-                        inputMode="decimal"
-                        className={
-                          inputClass
-                        }
-                      />
+                      <div className="mt-1 text-[10px] text-white/30">
+                        {form.coordinates
+                          ? `${form.coordinates[1].toFixed(
+                              6
+                            )}, ${form.coordinates[0].toFixed(
+                              6
+                            )}`
+                          : "Нажмите, чтобы изменить расположение"}
+                      </div>
                     </div>
 
-                    <div>
-                      <label
-                        className={
-                          labelClass
-                        }
-                      >
-                        Этаж
-                      </label>
-
-                      <input
-                        value={
-                          form.floor
-                        }
-                        onChange={(
-                          event
-                        ) =>
-                          updateForm(
-                            "floor",
-                            event.target.value.replace(
-                              /\D/g,
-                              ""
-                            )
-                          )
-                        }
-                        inputMode="numeric"
-                        className={
-                          inputClass
-                        }
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-4">
-                    <label
-                      className={
-                        labelClass
-                      }
-                    >
-                      Всего этажей
-                    </label>
-
-                    <input
-                      value={
-                        form.totalFloors
-                      }
-                      onChange={(
-                        event
-                      ) =>
-                        updateForm(
-                          "totalFloors",
-                          event.target.value.replace(
-                            /\D/g,
-                            ""
-                          )
-                        )
-                      }
-                      inputMode="numeric"
-                      className={
-                        inputClass
-                      }
-                    />
-                  </div>
-
-                  <div className="mt-4 space-y-1 rounded-xl border border-white/[0.07] p-1">
-                    {[
-                      [
-                        "furnished",
-                        "С мебелью",
-                      ],
-                      [
-                        "parking",
-                        "Парковка",
-                      ],
-                      [
-                        "pets",
-                        "Можно с животными",
-                      ],
-                    ].map(
-                      ([
-                        key,
-                        label,
-                      ]) => {
-                        const active =
-                          Boolean(
-                            form[
-                              key as keyof EditForm
-                            ]
-                          );
-
-                        return (
-                          <button
-                            key={
-                              key
-                            }
-                            type="button"
-                            onClick={() =>
-                              updateForm(
-                                key as keyof EditForm,
-                                !active as never
-                              )
-                            }
-                            className="flex min-h-[40px] w-full items-center justify-between rounded-lg px-2 text-left text-[11px] text-white/60 transition hover:bg-white/[0.035] hover:text-white"
-                          >
-                            <span>
-                              {
-                                label
-                              }
-                            </span>
-
-                            <span
-                              className={[
-                                "relative h-6 w-10 rounded-full transition",
-                                active
-                                  ? "bg-[#6FC9C2]"
-                                  : "bg-white/10",
-                              ].join(
-                                " "
-                              )}
-                            >
-                              <span
-                                className={[
-                                  "absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm transition",
-                                  active
-                                    ? "left-5"
-                                    : "left-1",
-                                ].join(
-                                  " "
-                                )}
-                              />
-                            </span>
-                          </button>
-                        );
-                      }
-                    )}
-                  </div>
-                </section>
-              ) : null}
-
-              {listingType ===
-                "commercial" ? (
-                <section className="rounded-2xl border border-white/[0.08] bg-white/[0.018] p-4">
-                  <p className="text-[13px] font-semibold text-white/85">
-                    Коммерция
-                  </p>
-
-                  <div className="mt-4">
-                    <label
-                      className={
-                        labelClass
-                      }
-                    >
-                      Назначение
-                    </label>
-
-                    <div className="grid grid-cols-2 gap-1 rounded-xl bg-white/[0.035] p-1">
-                      {COMMERCIAL_PURPOSES.map(
-                        (
-                          option
-                        ) => {
-                          const active =
-                            form.purpose ===
-                            option.value;
-
-                          return (
-                            <button
-                              key={
-                                option.value
-                              }
-                              type="button"
-                              onClick={() =>
-                                updateForm(
-                                  "purpose",
-                                  option.value
-                                )
-                              }
-                              className={[
-                                "min-h-[36px] rounded-lg text-[10px] font-semibold transition",
-                                active
-                                  ? "bg-[#6FC9C2] text-[#0a0f14]"
-                                  : "text-white/45 hover:bg-white/[0.04] hover:text-white",
-                              ].join(
-                                " "
-                              )}
-                            >
-                              {
-                                option.label
-                              }
-                            </button>
-                          );
-                        }
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="mt-4 grid grid-cols-2 gap-3">
-                    <div>
-                      <label
-                        className={
-                          labelClass
-                        }
-                      >
-                        Площадь, м²
-                      </label>
-
-                      <input
-                        value={
-                          form.area
-                        }
-                        onChange={(
-                          event
-                        ) =>
-                          updateForm(
-                            "area",
-                            event.target.value.replace(
-                              /[^\d\s.,]/g,
-                              ""
-                            )
-                          )
-                        }
-                        inputMode="decimal"
-                        className={
-                          inputClass
-                        }
-                      />
-                    </div>
-
-                    <div>
-                      <label
-                        className={
-                          labelClass
-                        }
-                      >
-                        Этаж
-                      </label>
-
-                      <input
-                        value={
-                          form.floor
-                        }
-                        onChange={(
-                          event
-                        ) =>
-                          updateForm(
-                            "floor",
-                            event.target.value.replace(
-                              /\D/g,
-                              ""
-                            )
-                          )
-                        }
-                        inputMode="numeric"
-                        className={
-                          inputClass
-                        }
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-4">
-                    <label
-                      className={
-                        labelClass
-                      }
-                    >
-                      Цена за м²
-                    </label>
-
-                    <input
-                      value={
-                        form.ratePerSqm
-                      }
-                      onChange={(
-                        event
-                      ) =>
-                        updateForm(
-                          "ratePerSqm",
-                          event.target.value.replace(
-                            /[^\d\s.,]/g,
-                            ""
-                          )
-                        )
-                      }
-                      inputMode="decimal"
-                      className={
-                        inputClass
-                      }
-                    />
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      updateForm(
-                        "parking",
-                        !form.parking
-                      )
-                    }
-                    className="mt-4 flex min-h-[40px] w-full items-center justify-between rounded-xl border border-white/[0.07] px-3 text-[11px] text-white/60 transition hover:bg-white/[0.035] hover:text-white"
-                  >
-                    <span>
-                      Парковка
-                    </span>
-
-                    <span
-                      className={[
-                        "relative h-6 w-10 rounded-full",
-                        form.parking
-                          ? "bg-[#6FC9C2]"
-                          : "bg-white/10",
-                      ].join(
-                        " "
-                      )}
-                    >
-                      <span
-                        className={[
-                          "absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm transition",
-                          form.parking
-                            ? "left-5"
-                            : "left-1",
-                        ].join(
-                          " "
-                        )}
-                      />
+                    <span className="text-[15px] text-[#6FC9C2]">
+                      →
                     </span>
                   </button>
                 </section>
-              ) : null}
 
-              {listingType ===
-                "land" ? (
-                <section className="rounded-2xl border border-white/[0.08] bg-white/[0.018] p-4">
-                  <p className="text-[13px] font-semibold text-white/85">
-                    Земля
-                  </p>
-
-                  <div className="mt-4">
-                    <label
-                      className={
-                        labelClass
-                      }
-                    >
-                      Назначение
-                    </label>
-
-                    <div className="grid grid-cols-2 gap-1 rounded-xl bg-white/[0.035] p-1">
-                      {LAND_USES.map(
-                        (
-                          option
-                        ) => {
-                          const active =
-                            form.landUse ===
-                            option.value;
-
-                          return (
-                            <button
-                              key={
-                                option.value
-                              }
-                              type="button"
-                              onClick={() =>
-                                updateForm(
-                                  "landUse",
-                                  option.value
-                                )
-                              }
-                              className={[
-                                "min-h-[36px] rounded-lg text-[10px] font-semibold transition",
-                                active
-                                  ? "bg-[#6FC9C2] text-[#0a0f14]"
-                                  : "text-white/45 hover:bg-white/[0.04] hover:text-white",
-                              ].join(
-                                " "
-                              )}
-                            >
-                              {
-                                option.label
-                              }
-                            </button>
-                          );
-                        }
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="mt-4">
-                    <label
-                      className={
-                        labelClass
-                      }
-                    >
-                      Площадь, м²
-                    </label>
-
-                    <input
-                      value={
-                        form.area
-                      }
-                      onChange={(
-                        event
-                      ) =>
-                        updateForm(
-                          "area",
-                          event.target.value.replace(
-                            /[^\d\s.,]/g,
-                            ""
-                          )
-                        )
-                      }
-                      inputMode="decimal"
-                      className={
-                        inputClass
-                      }
-                    />
-                  </div>
-                </section>
-              ) : null}
-
-              {/* LOCATION */}
-              <section className="rounded-2xl border border-white/[0.08] bg-white/[0.018] p-4">
-                <p className="text-[13px] font-semibold text-white/85">
-                  Локация
-                </p>
-
-                <div className="mt-4">
-                  <label
-                    className={
-                      labelClass
-                    }
-                  >
-                    Город
-                  </label>
-
-                  <select
-                    value={
-                      form.cityId
-                    }
-                    onChange={(
-                      event
-                    ) =>
-                      updateForm(
-                        "cityId",
-                        event.target.value
-                      )
-                    }
-                    className="h-11 w-full rounded-[12px] border border-white/10 bg-[#18212a] px-3.5 text-[12px] text-white outline-none focus:border-[#6FC9C2]"
-                  >
-                    <option
-                      value=""
-                      className="bg-[#18212a]"
-                    >
-                      Выберите город
-                    </option>
-
-                    {cities.map(
-                      (
-                        city
-                      ) => (
-                        <option
-                          key={
-                            city.id
-                          }
-                          value={
-                            city.id
-                          }
-                          className="bg-[#18212a]"
-                        >
-                          {getCityDisplayName(
-                            city,
-                            "ru"
-                          )}
-                        </option>
-                      )
-                    )}
-                  </select>
-                </div>
-
-                <div className="mt-4">
-                  <label
-                    className={
-                      labelClass
-                    }
-                  >
-                    Район
-                  </label>
-
-                  <input
-                    value={
-                      form.district
-                    }
-                    onChange={(
-                      event
-                    ) =>
-                      updateForm(
-                        "district",
-                        event.target.value
-                      )
-                    }
-                    className={
-                      inputClass
-                    }
-                  />
-                </div>
-
-                <div className="mt-4">
-                  <label
-                    className={
-                      labelClass
-                    }
-                  >
-                    Адрес
-                  </label>
-
-                  <input
-                    value={
-                      form.address
-                    }
-                    onChange={(
-                      event
-                    ) =>
-                      updateForm(
-                        "address",
-                        event.target.value
-                      )
-                    }
-                    className={
-                      inputClass
-                    }
-                  />
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setLocationOpen(
-                      true
-                    )
+                {/* CONTACTS */}
+                <section
+                  className={
+                    sectionClass
                   }
-                  className="mt-4 flex min-h-[64px] w-full items-center justify-between rounded-xl border border-white/[0.08] bg-white/[0.018] px-3.5 text-left transition hover:bg-white/[0.04]"
                 >
                   <div>
-                    <p className="text-[11px] font-medium text-white/65">
-                      Точка на карте
-                    </p>
+                    <div className="text-[13px] font-semibold text-white/88">
+                      Контакты
+                    </div>
 
-                    <p className="mt-1 text-[10px] text-white/25">
-                      {form.coordinates
-                        ? `${form.coordinates[1].toFixed(
-                            5
-                          )}, ${form.coordinates[0].toFixed(
-                            5
-                          )}`
-                        : "Не выбрана"}
-                    </p>
+                    <div className="mt-1 text-[10px] text-white/30">
+                      Контактные данные
+                      объявления.
+                    </div>
                   </div>
 
-                  <span className="text-[15px] text-[#6FC9C2]">
-                    →
-                  </span>
-                </button>
-              </section>
-
-              {/* CONTACTS */}
-              <section className="rounded-2xl border border-white/[0.08] bg-white/[0.018] p-4">
-                <p className="text-[13px] font-semibold text-white/85">
-                  Контакты
-                </p>
-
-                <div className="mt-4 space-y-4">
-                  <div>
+                  <div className="mt-5">
                     <label
                       className={
                         labelClass
@@ -2391,13 +2653,14 @@ export default function ListingEditModal({
                         )
                       }
                       inputMode="tel"
+                      placeholder="+996 ..."
                       className={
                         inputClass
                       }
                     />
                   </div>
 
-                  <div>
+                  <div className="mt-4">
                     <label
                       className={
                         labelClass
@@ -2418,13 +2681,14 @@ export default function ListingEditModal({
                           event.target.value
                         )
                       }
+                      placeholder="@username"
                       className={
                         inputClass
                       }
                     />
                   </div>
 
-                  <div>
+                  <div className="mt-4">
                     <label
                       className={
                         labelClass
@@ -2445,105 +2709,88 @@ export default function ListingEditModal({
                           event.target.value
                         )
                       }
+                      placeholder="+996 ..."
                       inputMode="tel"
                       className={
                         inputClass
                       }
                     />
                   </div>
-                </div>
-              </section>
+                </section>
 
-              {error && (
-                <div className="rounded-xl border border-red-400/20 bg-red-400/[0.07] px-3 py-2.5 text-[11px] leading-5 text-red-300">
-                  {
-                    error
-                  }
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+                {/* ERROR */}
+                {error && (
+                  <div className="rounded-[12px] border border-red-400/20 bg-red-400/[0.07] px-3.5 py-3 text-[11px] leading-5 text-red-300">
+                    {error}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
-        {/* FOOTER */}
-        <div className="flex shrink-0 gap-2 border-t border-white/[0.08] px-6 py-4">
-          <button
-            type="button"
-            disabled={
-              saving
-            }
-            onClick={
-              onClose
-            }
-            className="min-h-[42px] flex-1 rounded-xl border border-white/[0.08] px-4 text-[11px] font-medium text-white/45 transition hover:bg-white/[0.04] hover:text-white disabled:opacity-40"
-          >
-            Отмена
-          </button>
+          {/* FOOTER */}
+          <div className="flex shrink-0 items-center justify-between gap-3 border-t border-white/[0.08] px-7 py-4">
+            <button
+              type="button"
+              disabled={
+                saving
+              }
+              onClick={
+                onClose
+              }
+              className="h-11 rounded-full border border-white/[0.08] bg-white/[0.025] px-5 text-[12px] font-medium text-white/55 transition hover:bg-white/[0.05] hover:text-white/80 disabled:opacity-40"
+            >
+              Отмена
+            </button>
 
-          <button
-            type="button"
-            disabled={
-              loading ||
-              saving
-            }
-            onClick={
-              handleSave
-            }
-            className="min-h-[42px] flex-1 rounded-xl bg-[#6FC9C2] px-4 text-[11px] font-semibold text-[#0a0f14] transition hover:bg-[#7bd4cc] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {saving
-              ? "Сохранение…"
-              : "Сохранить изменения"}
-          </button>
+            <button
+              type="button"
+              disabled={
+                loading ||
+                saving
+              }
+              onClick={
+                handleSave
+              }
+              className="h-11 min-w-[150px] rounded-full bg-[#6FC9C2] px-6 text-[12px] font-semibold text-[#0a0f14] transition hover:bg-[#7ad6ce] disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/25"
+            >
+              {saving
+                ? "Сохраняем…"
+                : "Сохранить изменения →"}
+            </button>
+          </div>
         </div>
       </div>
 
-      {locationOpen &&
-        selectedCity && (
-          <LocationPicker
-            open={
-              locationOpen
-            }
-            cityName={getCityDisplayName(
-              selectedCity,
-              "ru"
-            )}
-            cityCoordinates={
-              selectedCity.coordinates
-            }
-            initialPosition={
-              form.coordinates
-            }
-            onClose={() =>
-              setLocationOpen(
-                false
+      <LocationPicker
+        open={
+          locationOpen
+        }
+        cityName={
+          selectedCity
+            ? getCityDisplayName(
+                selectedCity,
+                "ru"
               )
-            }
-            onConfirm={(
-              result
-            ) => {
-              updateForm(
-                "coordinates",
-                result.coordinates
-              );
-
-              updateForm(
-                "address",
-                result.address
-              );
-
-              updateForm(
-                "district",
-                result.district
-              );
-
-              setLocationOpen(
-                false
-              );
-            }}
-          />
-        )}
-    </div>,
+            : ""
+        }
+        cityCoordinates={
+          selectedCity?.coordinates ??
+          null
+        }
+        initialPosition={
+          form.coordinates
+        }
+        onClose={() =>
+          setLocationOpen(
+            false
+          )
+        }
+        onConfirm={
+          handleLocationConfirm
+        }
+      />
+    </>,
     document.body
   );
 }

@@ -22,6 +22,8 @@ import CityDropdown from "./CityDropdown";
 import AuthModal from "./auth/AuthModal";
 import ListingCreateModal from "./listings/ListingCreateModal";
 
+import "./navbar.css";
+
 interface NavbarProps {
   onCitySelect?: (
     city: City
@@ -37,14 +39,88 @@ interface DropdownPosition {
 export default function Navbar({
   onCitySelect,
 }: NavbarProps) {
-  const TOP = "top-5";
-  const MAX_WIDTH = "max-w-[1000px]";
-  const WIDTH = "w-[calc(100%-40px)]";
-  const HEIGHT = "h-[68px]";
-  const PADDING_X = "px-6";
+  /*
+   * =========================================================
+   * NAVBAR GEOMETRY
+   * =========================================================
+   *
+   * ВСЕ ЭЛЕМЕНТЫ НЕЗАВИСИМЫ.
+   *
+   * Меняешь один параметр —
+   * двигается только соответствующий элемент.
+   */
 
-  const LEFT_WIDTH = "220px";
-  const RIGHT_WIDTH = "220px";
+  const NAVBAR_TOP = 20;
+  const NAVBAR_HEIGHT = 68;
+  const NAVBAR_WIDTH = 1000;
+
+  /*
+   * Общие настройки
+   */
+  const NAVBAR_HORIZONTAL_MARGIN = 20;
+
+  /*
+   * ---------------------------------------------------------
+   * LOGO
+   * ---------------------------------------------------------
+   */
+
+  const LOGO_LEFT = 18;
+  const LOGO_TOP = 34;
+
+  const LOGO_FONT_SIZE = 24;
+
+  /*
+   * ---------------------------------------------------------
+   * LANGUAGES
+   * ---------------------------------------------------------
+   */
+
+  const LANGUAGE_LEFT = 130;
+  const LANGUAGE_TOP = 37;
+
+  /*
+   * ---------------------------------------------------------
+   * SEARCH
+   * ---------------------------------------------------------
+   */
+
+  const SEARCH_LEFT = 275;
+  const SEARCH_TOP = 34;
+
+  const SEARCH_WIDTH = 430;
+  const SEARCH_HEIGHT = 48;
+
+  const SEARCH_ICON_SIZE = 19;
+  const SEARCH_ICON_OFFSET_X = 10;
+
+  const SEARCH_TEXT_OFFSET_X = 18;
+
+  /*
+   * ---------------------------------------------------------
+   * PROFILE / LOGIN
+   * ---------------------------------------------------------
+   */
+
+  const PROFILE_LEFT = 780;
+  const PROFILE_TOP = 34;
+
+  /*
+   * ---------------------------------------------------------
+   * PUBLISH
+   * ---------------------------------------------------------
+   */
+
+  const PUBLISH_LEFT = 870;
+  const PUBLISH_TOP = 34;
+
+  /*
+   * ---------------------------------------------------------
+   * USERNAME
+   * ---------------------------------------------------------
+   */
+
+  const USERNAME_MAX_WIDTH = 120;
 
   const {
     t,
@@ -70,36 +146,6 @@ export default function Navbar({
     setListingCreateOpen,
   ] = useState(false);
 
-  const LOGO_X =
-    "translate-x-[15px]";
-
-  const LOGO_SIZE =
-    "text-2xl";
-
-  const LOGO_COLOR =
-    "text-[#6FC9C2]";
-
-  const SEARCH_WIDTH =
-    "w-[430px]";
-
-  const SEARCH_HEIGHT =
-    "h-12";
-
-  const SEARCH_X =
-    "translate-x-[0px]";
-
-  const SEARCH_PADDING =
-    "px-5";
-
-  const RIGHT_X =
-    "translate-x-[-20px]";
-
-  const BUTTON_GAP =
-    "gap-2";
-
-  const LOGIN_COLOR =
-    "text-[#D6D3CC]";
-
   const searchButtonRef =
     useRef<HTMLButtonElement>(
       null
@@ -115,8 +161,10 @@ export default function Navbar({
     null
   );
 
-  const [isOpen, setIsOpen] =
-    useState(false);
+  const [
+    isOpen,
+    setIsOpen,
+  ] = useState(false);
 
   const [
     isMounted,
@@ -131,49 +179,80 @@ export default function Navbar({
       null
     );
 
+  /*
+   * =========================================================
+   * CITIES
+   * =========================================================
+   */
+
   useEffect(() => {
     let cancelled = false;
 
     loadCities()
-      .then((loaded) => {
-        if (!cancelled) {
-          setCities(loaded);
+      .then(
+        (
+          loaded
+        ) => {
+          if (
+            !cancelled
+          ) {
+            setCities(
+              loaded
+            );
+          }
         }
-      })
-      .catch((error) => {
-        console.error(
-          "Не удалось загрузить список городов:",
+      )
+      .catch(
+        (
           error
-        );
-      });
+        ) => {
+          console.error(
+            "Не удалось загрузить список городов:",
+            error
+          );
+        }
+      );
 
     return () => {
       cancelled = true;
     };
   }, []);
 
+  /*
+   * =========================================================
+   * CITY DROPDOWN POSITION
+   * =========================================================
+   */
+
   const updatePosition =
-    useCallback(() => {
-      const rect =
-        searchButtonRef.current?.getBoundingClientRect();
+    useCallback(
+      () => {
+        const rect =
+          searchButtonRef.current?.getBoundingClientRect();
 
-      if (!rect) {
-        return;
-      }
+        if (!rect) {
+          return;
+        }
 
-      setPosition({
-        top:
-          rect.bottom + 8,
-        left:
-          rect.left,
-        width:
-          rect.width,
-      });
-    }, []);
+        setPosition({
+          top:
+            rect.bottom + 8,
+
+          left:
+            rect.left,
+
+          width:
+            rect.width,
+        });
+      },
+      []
+    );
 
   useEffect(() => {
     if (isOpen) {
-      setIsMounted(true);
+      setIsMounted(
+        true
+      );
 
       updatePosition();
 
@@ -192,12 +271,19 @@ export default function Navbar({
 
     if (isMounted) {
       const timeout =
-        setTimeout(() => {
-          setIsMounted(false);
-        }, 160);
+        setTimeout(
+          () => {
+            setIsMounted(
+              false
+            );
+          },
+          160
+        );
 
       return () => {
-        clearTimeout(timeout);
+        clearTimeout(
+          timeout
+        );
       };
     }
   }, [
@@ -206,35 +292,60 @@ export default function Navbar({
     updatePosition,
   ]);
 
-  const handleToggle = () => {
-    setIsOpen(
-      (previous) =>
-        !previous
-    );
-  };
+  /*
+   * =========================================================
+   * HANDLERS
+   * =========================================================
+   */
+
+  const handleToggle =
+    () => {
+      setIsOpen(
+        (
+          previous
+        ) =>
+          !previous
+      );
+    };
 
   const handleRequestClose =
     () => {
-      setIsOpen(false);
+      setIsOpen(
+        false
+      );
     };
 
   const handleSelectCity =
-    (city: City) => {
-      setSelectedCity(city);
-      setIsOpen(false);
+    (
+      city: City
+    ) => {
+      setSelectedCity(
+        city
+      );
 
-      onCitySelect?.(city);
+      setIsOpen(
+        false
+      );
+
+      onCitySelect?.(
+        city
+      );
     };
 
-  const handleLogin = () => {
-    setAuthModalOpen(true);
-  };
+  const handleLogin =
+    () => {
+      setAuthModalOpen(
+        true
+      );
+    };
 
   const handleLogout =
     async () => {
       try {
         await signOut();
-      } catch (error) {
+      } catch (
+        error
+      ) {
         console.error(
           "[Navbar] Logout failed:",
           error
@@ -242,23 +353,26 @@ export default function Navbar({
       }
     };
 
-  /*
-   * Главный handler публикации.
-   *
-   * Гость:
-   *   → AuthModal
-   *
-   * Авторизованный:
-   *   → ListingCreateModal
-   */
-  const handlePublish = () => {
-    if (!user) {
-      setAuthModalOpen(true);
-      return;
-    }
+  const handlePublish =
+    () => {
+      if (!user) {
+        setAuthModalOpen(
+          true
+        );
 
-    setListingCreateOpen(true);
-  };
+        return;
+      }
+
+      setListingCreateOpen(
+        true
+      );
+    };
+
+  /*
+   * =========================================================
+   * DISPLAY DATA
+   * =========================================================
+   */
 
   const searchLabel =
     selectedCity
@@ -271,13 +385,16 @@ export default function Navbar({
         );
 
   const userEmail =
-    user?.email ?? "";
+    user?.email ??
+    "";
 
   const userName =
     profile?.display_name?.trim() ||
     user?.user_metadata?.full_name ||
     user?.user_metadata?.name ||
-    userEmail.split("@")[0] ||
+    userEmail.split(
+      "@"
+    )[0] ||
     "Профиль";
 
   const userAvatar =
@@ -286,76 +403,130 @@ export default function Navbar({
     user?.user_metadata?.picture ||
     null;
 
+  /*
+   * =========================================================
+   * RENDER
+   * =========================================================
+   */
+
   return (
     <>
       <header
-        className={[
-          "fixed",
-          TOP,
-          "left-1/2",
-          "-translate-x-1/2",
-          "z-50",
-          WIDTH,
-          MAX_WIDTH,
-        ].join(" ")}
+        className="
+          jaymap-navbar
+          fixed
+          left-1/2
+          z-50
+          w-[calc(100%-40px)]
+          max-w-[1000px]
+        "
+        style={{
+          top:
+            `${NAVBAR_TOP}px`,
+
+          height:
+            `${NAVBAR_HEIGHT}px`,
+
+          transform:
+            "translateX(-50%)",
+        }}
       >
         <div
-          className={[
-            "glass",
-            "rounded-full",
-            HEIGHT,
-            PADDING_X,
-            "grid",
-            "items-center",
-            "relative",
-          ].join(" ")}
-          style={{
-            gridTemplateColumns:
-              `${LEFT_WIDTH} 1fr ${RIGHT_WIDTH}`,
-          }}
+          className="
+            glass
+            relative
+            h-full
+            w-full
+            rounded-full
+          "
         >
-          {/* Logo */}
+          {/* =================================================
+              LOGO
+             ================================================= */}
 
           <div
-            className={[
-              "justify-self-start",
-              LOGO_X,
-            ].join(" ")}
+            className="jaymap-navbar-element absolute"
+            style={{
+              left:
+                `${LOGO_LEFT}px`,
+
+              top:
+                `${LOGO_TOP}px`,
+
+              transform:
+                "translateY(-50%)",
+
+              fontSize:
+                `${LOGO_FONT_SIZE}px`,
+            }}
           >
             <h1
-              className={[
-                LOGO_SIZE,
-                "font-bold",
-                "tracking-tight",
-              ].join(" ")}
+              className="
+                m-0
+                p-0
+                whitespace-nowrap
+                font-bold
+                tracking-tight
+              "
             >
               Jay
               <span
-                className={
-                  LOGO_COLOR
-                }
+                className="
+                  text-[#6FC9C2]
+                "
               >
                 Map
               </span>
             </h1>
           </div>
 
-          {/* Language */}
+          {/* =================================================
+              LANGUAGES
+             ================================================= */}
 
-          <div className="absolute left-[130px] top-[37px] -translate-y-1/2 flex items-center gap-1">
+          <div
+            className="
+              jaymap-navbar-element
+              absolute
+              flex
+              items-center
+              gap-1
+            "
+            style={{
+              left:
+                `${LANGUAGE_LEFT}px`,
+
+              top:
+                `${LANGUAGE_TOP}px`,
+
+              transform:
+                "translateY(-50%)",
+            }}
+          >
             {(
               [
                 {
-                  code: "ky",
-                  label: "KG",
+                  code:
+                    "ky",
+
+                  label:
+                    "KG",
                 },
+
                 {
-                  code: "ru",
-                  label: "RU",
+                  code:
+                    "ru",
+
+                  label:
+                    "RU",
                 },
+
                 {
-                  code: "en",
-                  label: "EN",
+                  code:
+                    "en",
+
+                  label:
+                    "EN",
                 },
               ] as const
             ).map(
@@ -364,34 +535,72 @@ export default function Navbar({
                 label,
               }) => (
                 <button
-                  key={code}
+                  key={
+                    code
+                  }
                   type="button"
                   onClick={() =>
                     setLanguage(
                       code
                     )
                   }
-                  className="relative pb-1 text-[5px] font-semibold tracking-[0.08em] text-white/40 transition hover:text-white"
+                  className="
+                    relative
+                    m-0
+                    border-0
+                    bg-transparent
+                    p-0
+                    pb-1
+                    text-[11px]
+                    font-semibold
+                    leading-none
+                    tracking-[0.04em]
+                    text-white/40
+                    transition
+                    hover:text-white
+                  "
                 >
                   {label}
 
                   {language ===
                     code && (
-                    <span className="absolute left-1 right-1 -bottom-[1px] h-[1px] rounded-full bg-[#6FC9C2]" />
+                    <span
+                      className="
+                        absolute
+                        bottom-[-2px]
+                        left-1/2
+                        h-[1px]
+                        w-[16px]
+                        -translate-x-1/2
+                        rounded-full
+                        bg-[#6FC9C2]
+                      "
+                    />
                   )}
                 </button>
               )
             )}
           </div>
 
-          {/* Search */}
+          {/* =================================================
+              SEARCH
+             ================================================= */}
 
           <div
-            className={[
-              "relative",
-              "justify-self-center",
-              SEARCH_X,
-            ].join(" ")}
+            className="
+              jaymap-navbar-element
+              absolute
+            "
+            style={{
+              left:
+                `${SEARCH_LEFT}px`,
+
+              top:
+                `${SEARCH_TOP}px`,
+
+              transform:
+                "translateY(-50%)",
+            }}
           >
             <button
               ref={
@@ -401,46 +610,73 @@ export default function Navbar({
               onClick={
                 handleToggle
               }
-              className={[
-                "flex",
-                "items-center",
-                SEARCH_WIDTH,
-                SEARCH_HEIGHT,
-                "rounded-full",
-                "bg-white/70",
-                SEARCH_PADDING,
-                "text-sm",
-                "text-gray-700",
-                "shadow-sm",
-                "transition",
-                "hover:bg-white",
-              ].join(" ")}
+              className="
+                m-0
+                flex
+                items-center
+                rounded-full
+                border-0
+                bg-white/70
+                p-0
+                px-5
+                text-gray-700
+                shadow-sm
+                transition
+                hover:bg-white
+              "
+              style={{
+                width:
+                  `${SEARCH_WIDTH}px`,
+
+                height:
+                  `${SEARCH_HEIGHT}px`,
+              }}
             >
               <span
+                className="
+                  jaymap-navbar-icon
+                "
                 style={{
-                  fontSize:
-                    "19px",
+                  width:
+                    `${SEARCH_ICON_SIZE}px`,
+
+                  height:
+                    `${SEARCH_ICON_SIZE}px`,
+
                   transform:
-                    "translateX(10px)",
-                  display:
-                    "inline-block",
+                    `translateX(${SEARCH_ICON_OFFSET_X}px)`,
+
+                  fontSize:
+                    `${SEARCH_ICON_SIZE}px`,
                 }}
+                aria-hidden="true"
               >
                 🔍
               </span>
 
               <span
+                className="
+                  jaymap-navbar-search-text
+                  whitespace-nowrap
+                "
                 style={{
+                  marginLeft:
+                    `${SEARCH_TEXT_OFFSET_X}px`,
+
                   fontFamily:
                     "Inter",
+
                   fontSize:
                     "19px",
-                  color:
-                    "#2b2d34",
-                  marginLeft:
-                    "18px",
+
                   fontWeight:
                     500,
+
+                  color:
+                    "#2b2d34",
+
+                  lineHeight:
+                    1,
                 }}
               >
                 {searchLabel}
@@ -448,117 +684,196 @@ export default function Navbar({
             </button>
           </div>
 
-          {/* Right */}
+          {/* =================================================
+              PROFILE / LOGIN
+             ================================================= */}
 
           <div
-            className={[
-              "justify-self-end",
-              "flex",
-              "items-center",
-              BUTTON_GAP,
-              RIGHT_X,
-            ].join(" ")}
+            className="
+              jaymap-navbar-element
+              absolute
+            "
+            style={{
+              left:
+                `${PROFILE_LEFT}px`,
+
+              top:
+                `${PROFILE_TOP}px`,
+
+              transform:
+                "translateY(-50%)",
+            }}
           >
-            <div className="flex items-center gap-1 mr-3">
-              {authLoading ||
-              profileLoading ? (
-                <div className="h-9 w-24 animate-pulse rounded-full bg-white/10" />
-              ) : user ? (
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={
-                      handleLogout
-                    }
-                    className="flex items-center gap-2 rounded-full px-2.5 py-1.5 text-white/80 transition hover:bg-white/10 hover:text-white"
-                    title="Выйти"
-                  >
-                    {userAvatar ? (
-                      <img
-                        src={
-                          userAvatar
-                        }
-                        alt=""
-                        className="h-7 w-7 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#6FC9C2] text-[11px] font-bold text-[#0a0f14]">
-                        {userName
-                          .slice(
-                            0,
-                            1
-                          )
-                          .toUpperCase()}
-                      </div>
-                    )}
-
-                    <span className="max-w-[120px] truncate text-[13px] font-medium">
-                      {userName}
-                    </span>
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={
-                    handleLogin
-                  }
-                  className={[
-                    "font-medium",
-                    LOGIN_COLOR,
-                    "hover:text-black",
-                  ].join(" ")}
-                  style={{
-                    fontSize:
-                      "18px",
-                    fontWeight:
-                      500,
-                    marginRight:
-                      "15px",
-                  }}
-                >
-                  {t(
-                    "navbar.login"
-                  )}
-                </button>
-              )}
-
+            {authLoading ||
+            profileLoading ? (
+              <div
+                className="
+                  h-9
+                  w-24
+                  animate-pulse
+                  rounded-full
+                  bg-white/10
+                "
+              />
+            ) : user ? (
               <button
                 type="button"
                 onClick={
-                  handlePublish
+                  handleLogout
                 }
-                className="rounded-full bg-emerald-600 text-sm font-semibold text-white transition hover:bg-emerald-700"
-                style={{
-                  paddingLeft:
-                    "7px",
-                  paddingRight:
-                    "7px",
-                  paddingTop:
-                    "3px",
-                  paddingBottom:
-                    "3px",
-                  whiteSpace:
-                    "nowrap",
-                  flexShrink:
-                    0,
-                }}
+                title="Выйти"
+                className="
+                  m-0
+                  flex
+                  items-center
+                  gap-2
+                  rounded-full
+                  border-0
+                  bg-transparent
+                  p-0
+                  px-1
+                  py-0
+                  text-white/80
+                  transition
+                  hover:bg-white/10
+                  hover:text-white
+                "
+              >
+                {userAvatar ? (
+                  <img
+                    src={
+                      userAvatar
+                    }
+                    alt=""
+                    className="
+                      block
+                      h-7
+                      w-7
+                      rounded-full
+                      object-cover
+                    "
+                  />
+                ) : (
+                  <div
+                    className="
+                      flex
+                      h-7
+                      w-7
+                      items-center
+                      justify-center
+                      rounded-full
+                      bg-[#6FC9C2]
+                      text-[11px]
+                      font-bold
+                      leading-none
+                      text-[#0a0f14]
+                    "
+                  >
+                    {userName
+                      .slice(
+                        0,
+                        1
+                      )
+                      .toUpperCase()}
+                  </div>
+                )}
+
+                <span
+                  className="
+                    max-w-[120px]
+                    truncate
+                    text-[13px]
+                    font-medium
+                    leading-none
+                  "
+                >
+                  {userName}
+                </span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={
+                  handleLogin
+                }
+                className="
+                  m-0
+                  border-0
+                  bg-transparent
+                  p-0
+                  text-[18px]
+                  font-medium
+                  leading-none
+                  text-[#D6D3CC]
+                  transition
+                  hover:text-black
+                "
               >
                 {t(
-                  "navbar.post"
+                  "navbar.login"
                 )}
               </button>
-            </div>
+            )}
+          </div>
+
+          {/* =================================================
+              PUBLISH
+             ================================================= */}
+
+          <div
+            className="
+              jaymap-navbar-element
+              absolute
+            "
+            style={{
+              left:
+                `${PUBLISH_LEFT}px`,
+
+              top:
+                `${PUBLISH_TOP}px`,
+
+              transform:
+                "translateY(-50%)",
+            }}
+          >
+            <button
+              type="button"
+              onClick={
+                handlePublish
+              }
+              className="
+                m-0
+                rounded-full
+                border-0
+                bg-emerald-600
+                px-3
+                py-2
+                text-sm
+                font-semibold
+                leading-none
+                text-white
+                transition
+                hover:bg-emerald-700
+              "
+            >
+              {t(
+                "navbar.post"
+              )}
+            </button>
           </div>
         </div>
 
-        {/* City dropdown */}
+        {/* ===================================================
+            CITY DROPDOWN
+           =================================================== */}
 
         {isMounted &&
           position &&
           createPortal(
             <CityDropdown
-              cities={cities}
+              cities={
+                cities
+              }
               selectedCityId={
                 selectedCity?.id ??
                 null
@@ -566,8 +881,12 @@ export default function Navbar({
               language={
                 language
               }
-              isOpen={isOpen}
-              position={position}
+              isOpen={
+                isOpen
+              }
+              position={
+                position
+              }
               onSelect={
                 handleSelectCity
               }
@@ -582,7 +901,9 @@ export default function Navbar({
           )}
       </header>
 
-      {/* Auth */}
+      {/* =====================================================
+          AUTH
+         ===================================================== */}
 
       <AuthModal
         open={
@@ -595,7 +916,9 @@ export default function Navbar({
         }
       />
 
-      {/* Listing creation */}
+      {/* =====================================================
+          LISTING CREATION
+         ===================================================== */}
 
       <ListingCreateModal
         open={
