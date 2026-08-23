@@ -30,7 +30,12 @@
  * ------------------------------------------------------------
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 import {
   getSectionById,
@@ -38,19 +43,42 @@ import {
   secondarySections,
 } from "./sidebarConfig";
 
-import { useSidebarState } from "./useSidebarState";
+import {
+  useSidebarState,
+} from "./useSidebarState";
 
-import { SidebarNavigation } from "./SidebarNavigation";
-import { SidebarFooter } from "./SidebarFooter";
-import { SidebarWorkspace } from "./SidebarWorkspace";
-import { SidebarOverlay } from "./SidebarOverlay";
-import { IconRenderer } from "./IconRenderer";
+import {
+  SidebarNavigation,
+} from "./SidebarNavigation";
+
+import {
+  SidebarFooter,
+} from "./SidebarFooter";
+
+import {
+  SidebarWorkspace,
+} from "./SidebarWorkspace";
+
+import {
+  SidebarOverlay,
+} from "./SidebarOverlay";
+
+import {
+  IconRenderer,
+} from "./IconRenderer";
+
 import {
   MenuRailIcon,
   ChevronLeftIcon,
 } from "./icons";
 
-import { useTranslation } from "@/lib/i18n";
+import {
+  useTranslation,
+} from "@/lib/i18n";
+
+import type {
+  FavoriteListing,
+} from "@/lib/supabase/api";
 
 import "./theme.css";
 
@@ -69,21 +97,44 @@ interface SidebarProps {
    */
   onApplyFilters?: (
     sectionId: string,
-    filters: Record<string, unknown>
+    filters: Record<
+      string,
+      unknown
+    >
+  ) => void;
+
+  /**
+   * Вызывается при выборе объявления
+   * из FavoritesWorkspace.
+   */
+  onFavoriteSelect?: (
+    favorite: FavoriteListing
   ) => void;
 }
 
 const RAIL_WIDTH = 56;
+
 const PANEL_WIDTH = 360;
-const CONTENT_WIDTH = PANEL_WIDTH - RAIL_WIDTH;
+
+const CONTENT_WIDTH =
+  PANEL_WIDTH -
+  RAIL_WIDTH;
 
 export default function Sidebar({
   theme = "dark",
-  onApplyFilters,
-}: SidebarProps) {
-  const { t } = useTranslation();
 
-  const state = useSidebarState(true);
+  onApplyFilters,
+
+  onFavoriteSelect,
+}: SidebarProps) {
+  const {
+    t,
+  } = useTranslation();
+
+  const state =
+    useSidebarState(
+      true
+    );
 
   const {
     collapsed,
@@ -109,58 +160,84 @@ export default function Sidebar({
     setMobileOpen,
   } = state;
 
-  const [validationError, setValidationError] =
-    useState(false);
+  const [
+    validationError,
+    setValidationError,
+  ] = useState(false);
 
   const activeMainSection =
-    getSectionById(activeMainId);
+    getSectionById(
+      activeMainId
+    );
 
   const secondarySection =
-    getSectionById(secondaryId);
+    getSectionById(
+      secondaryId
+    );
 
   const isOverlayMode =
-    breakpoint !== "desktop";
+    breakpoint !==
+    "desktop";
 
   /**
    * На tablet/mobile Sidebar раскрывается поверх карты.
    */
-  const expanded = isOverlayMode
-    ? mobileOpen
-    : !collapsed;
+  const expanded =
+    isOverlayMode
+      ? mobileOpen
+      : !collapsed;
 
-  const handleSelectMain = useCallback(
-    (id: string) => {
-      setValidationError(false);
+  const handleSelectMain =
+    useCallback(
+      (
+        id: string
+      ) => {
+        setValidationError(
+          false
+        );
 
-      openMain(id);
+        openMain(id);
 
-      if (isOverlayMode) {
-        setMobileOpen(true);
-      }
-    },
-    [
-      openMain,
-      isOverlayMode,
-      setMobileOpen,
-    ]
-  );
+        if (
+          isOverlayMode
+        ) {
+          setMobileOpen(
+            true
+          );
+        }
+      },
+      [
+        openMain,
+        isOverlayMode,
+        setMobileOpen,
+      ]
+    );
 
-  const handleSelectSecondary = useCallback(
-    (id: string) => {
-      setValidationError(false);
+  const handleSelectSecondary =
+    useCallback(
+      (
+        id: string
+      ) => {
+        setValidationError(
+          false
+        );
 
-      openSecondary(id);
+        openSecondary(id);
 
-      if (isOverlayMode) {
-        setMobileOpen(true);
-      }
-    },
-    [
-      openSecondary,
-      isOverlayMode,
-      setMobileOpen,
-    ]
-  );
+        if (
+          isOverlayMode
+        ) {
+          setMobileOpen(
+            true
+          );
+        }
+      },
+      [
+        openSecondary,
+        isOverlayMode,
+        setMobileOpen,
+      ]
+    );
 
   /**
    * Главная точка Apply.
@@ -174,120 +251,173 @@ export default function Sidebar({
    * → normalize
    * → applied
    */
-  const handleApply = useCallback(() => {
-    if (!activeMainSection) {
-      return;
-    }
+  const handleApply =
+    useCallback(
+      () => {
+        if (
+          !activeMainSection
+        ) {
+          return;
+        }
 
-    const sectionId =
-      activeMainSection.id;
+        const sectionId =
+          activeMainSection.id;
 
-    const result =
-      applyDraft(sectionId);
+        const result =
+          applyDraft(
+            sectionId
+          );
 
-    if (!result.valid) {
-      /**
-       * Пока не меняем систему i18n.
-       * Просто показываем локальный browser-safe state.
-       *
-       * На следующем этапе сделаем полноценный
-       * inline validation message с переводами.
-       */
-      setValidationError(true);
+        if (
+          !result.valid
+        ) {
+          /**
+           * Пока не меняем систему i18n.
+           * Просто показываем локальный browser-safe state.
+           *
+           * На следующем этапе сделаем полноценный
+           * inline validation message с переводами.
+           */
+          setValidationError(
+            true
+          );
 
-      console.warn(
-        "[Sidebar] Invalid filters:",
-        result.issues
-      );
+          console.warn(
+            "[Sidebar] Invalid filters:",
+            result.issues
+          );
 
-      return;
-    }
+          return;
+        }
 
-    setValidationError(false);
+        setValidationError(
+          false
+        );
 
-    onApplyFilters?.(
-      sectionId,
-      result.filter
+        onApplyFilters?.(
+          sectionId,
+          result.filter
+        );
+
+        /**
+         * На mobile после успешного Apply закрываем
+         * overlay, чтобы пользователь снова видел карту.
+         */
+        if (
+          isOverlayMode
+        ) {
+          setMobileOpen(
+            false
+          );
+        }
+      },
+      [
+        activeMainSection,
+        applyDraft,
+        onApplyFilters,
+        isOverlayMode,
+        setMobileOpen,
+      ]
     );
 
-    /**
-     * На mobile после успешного Apply закрываем
-     * overlay, чтобы пользователь снова видел карту.
-     */
-    if (isOverlayMode) {
-      setMobileOpen(false);
-    }
-  }, [
-    activeMainSection,
-    applyDraft,
-    onApplyFilters,
-    isOverlayMode,
-    setMobileOpen,
-  ]);
-
-  const handleCloseOverlay = useCallback(
-    () => {
-      setMobileOpen(false);
-    },
-    [setMobileOpen]
-  );
+  const handleCloseOverlay =
+    useCallback(
+      () => {
+        setMobileOpen(
+          false
+        );
+      },
+      [
+        setMobileOpen,
+      ]
+    );
 
   /**
    * Свайп от левого края для открытия Sidebar
    * на mobile.
    */
   const touchStartX =
-    useRef<number | null>(null);
+    useRef<number | null>(
+      null
+    );
 
   useEffect(() => {
-    if (breakpoint !== "mobile") {
+    if (
+      breakpoint !==
+      "mobile"
+    ) {
       return;
     }
 
-    const onTouchStart = (
-      event: TouchEvent
-    ) => {
-      const x =
-        event.touches[0]?.clientX ?? 0;
+    const onTouchStart =
+      (
+        event: TouchEvent
+      ) => {
+        const x =
+          event.touches[0]
+            ?.clientX ??
+          0;
 
-      if (x < 24) {
-        touchStartX.current = x;
-      }
-    };
+        if (
+          x < 24
+        ) {
+          touchStartX.current =
+            x;
+        }
+      };
 
-    const onTouchMove = (
-      event: TouchEvent
-    ) => {
-      if (touchStartX.current === null) {
-        return;
-      }
+    const onTouchMove =
+      (
+        event: TouchEvent
+      ) => {
+        if (
+          touchStartX.current ===
+          null
+        ) {
+          return;
+        }
 
-      const currentX =
-        event.touches[0]?.clientX ?? 0;
+        const currentX =
+          event.touches[0]
+            ?.clientX ??
+          0;
 
-      const deltaX =
-        currentX - touchStartX.current;
+        const deltaX =
+          currentX -
+          touchStartX.current;
 
-      if (deltaX > 60) {
-        setMobileOpen(true);
-        touchStartX.current = null;
-      }
-    };
+        if (
+          deltaX > 60
+        ) {
+          setMobileOpen(
+            true
+          );
 
-    const onTouchEnd = () => {
-      touchStartX.current = null;
-    };
+          touchStartX.current =
+            null;
+        }
+      };
+
+    const onTouchEnd =
+      () => {
+        touchStartX.current =
+          null;
+      };
 
     window.addEventListener(
       "touchstart",
       onTouchStart,
-      { passive: true }
+      {
+        passive: true,
+      }
     );
 
     window.addEventListener(
       "touchmove",
       onTouchMove,
-      { passive: true }
+      {
+        passive: true,
+      }
     );
 
     window.addEventListener(
@@ -322,7 +452,11 @@ export default function Sidebar({
       : RAIL_WIDTH;
 
   return (
-    <div data-sidebar-theme={theme}>
+    <div
+      data-sidebar-theme={
+        theme
+      }
+    >
       <SidebarOverlay
         visible={
           isOverlayMode &&
@@ -334,14 +468,27 @@ export default function Sidebar({
       />
 
       <aside
-        aria-label={t("sidebar.panelLabel")}
+        aria-label={t(
+          "sidebar.panelLabel"
+        )}
         style={{
-          width: panelWidth,
-          position: "fixed",
-          top: "20px",
-          left: "20px",
-          bottom: "230px",
-          zIndex: 50,
+          width:
+            panelWidth,
+
+          position:
+            "fixed",
+
+          top:
+            "20px",
+
+          left:
+            "20px",
+
+          bottom:
+            "230px",
+
+          zIndex:
+            50,
         }}
         className={[
           "rounded-[var(--sb-radius-panel)]",
@@ -350,10 +497,13 @@ export default function Sidebar({
           "shadow-[var(--sb-shadow)]",
           "backdrop-blur-[var(--sb-blur)]",
           "flex overflow-hidden",
-          breakpoint === "mobile" &&
+
+          breakpoint ===
+            "mobile" &&
           !mobileOpen
             ? "-translate-x-[calc(100%+40px)]"
             : "translate-x-0",
+
           "transition-transform duration-[220ms] ease-out",
         ].join(" ")}
       >
@@ -363,7 +513,8 @@ export default function Sidebar({
 
         <div
           style={{
-            width: RAIL_WIDTH,
+            width:
+              RAIL_WIDTH,
           }}
           className={[
             "flex h-full shrink-0",
@@ -376,9 +527,14 @@ export default function Sidebar({
             <button
               type="button"
               onClick={() => {
-                if (isOverlayMode) {
+                if (
+                  isOverlayMode
+                ) {
                   setMobileOpen(
-                    (value) => !value
+                    (
+                      value
+                    ) =>
+                      !value
                   );
                 } else {
                   toggleCollapsed();
@@ -393,7 +549,9 @@ export default function Sidebar({
                       "sidebar.expandPanel"
                     )
               }
-              aria-expanded={expanded}
+              aria-expanded={
+                expanded
+              }
               className={[
                 "mx-auto flex h-11 w-11",
                 "items-center justify-center",
@@ -402,7 +560,9 @@ export default function Sidebar({
                 "transition-colors duration-150",
                 "hover:bg-[var(--sb-hover-bg)]",
                 "hover:text-[var(--sb-icon-hover)]",
-              ].join(" ")}
+              ].join(
+                " "
+              )}
             >
               <IconRenderer
                 icon={
@@ -415,8 +575,12 @@ export default function Sidebar({
             </button>
 
             <SidebarNavigation
-              sections={mainSections}
-              activeId={activeMainId}
+              sections={
+                mainSections
+              }
+              activeId={
+                activeMainId
+              }
               onSelect={
                 handleSelectMain
               }
@@ -427,7 +591,9 @@ export default function Sidebar({
             sections={
               secondarySections
             }
-            activeId={secondaryId}
+            activeId={
+              secondaryId
+            }
             onSelect={
               handleSelectSecondary
             }
@@ -440,15 +606,19 @@ export default function Sidebar({
 
         <div
           style={{
-            width: CONTENT_WIDTH,
+            width:
+              CONTENT_WIDTH,
           }}
-          aria-hidden={!expanded}
+          aria-hidden={
+            !expanded
+          }
           className={[
             "h-full shrink-0",
             "border-l border-[var(--sb-divider)]",
             "transition-[transform,opacity]",
             "duration-[250ms] ease-out",
             "will-change-transform",
+
             expanded
               ? "translate-x-0 opacity-100"
               : "pointer-events-none translate-x-[-24px] opacity-0",
@@ -475,7 +645,8 @@ export default function Sidebar({
                 "shadow-lg",
               ].join(" ")}
             >
-              Проверьте значения фильтров.
+              Проверьте значения
+              фильтров.
             </div>
           )}
 
@@ -492,13 +663,19 @@ export default function Sidebar({
             state={{
               openMain:
                 handleSelectMain,
+
               closeMain,
               closeSecondary,
+
               getSectionFilters,
+
               setFilter,
             }}
             onApply={
               handleApply
+            }
+            onFavoriteSelect={
+              onFavoriteSelect
             }
           />
         </div>

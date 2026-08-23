@@ -387,8 +387,16 @@ export interface Database {
 
         Returns: Json;
       };
-    };
+      get_my_favorites: {
+        Args: Record<
+          string,
+          never
+        >;
 
+        Returns: Json;
+      };
+    };
+     
     Enums: Record<
       string,
       never

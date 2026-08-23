@@ -26,7 +26,9 @@ import {
 import AuthModal from "@/components/auth/AuthModal";
 
 import {
+  getFavoriteIds,
   getListingContacts,
+  toggleFavorite,
 } from "@/lib/supabase/api";
 
 import {
@@ -78,6 +80,9 @@ interface ListingContacts {
   whatsapp: string | null;
 }
 
+const FAVORITE_EVENT =
+  "jaymap:favorite-changed";
+
 export default function ListingPopup({
   listing,
   onClose,
@@ -121,6 +126,16 @@ export default function ListingPopup({
   ] = useState(false);
 
   const [
+    isFavorite,
+    setIsFavorite,
+  ] = useState(false);
+
+  const [
+    favoriteLoading,
+    setFavoriteLoading,
+  ] = useState(false);
+
+  const [
     isVisible,
     setIsVisible,
   ] = useState(false);
@@ -156,6 +171,75 @@ export default function ListingPopup({
       !!user
     );
   }, [user]);
+
+  /*
+   * Favorite state.
+   *
+   * Гость:
+   *   favorite не запрашиваем.
+   *
+   * Авторизованный:
+   *   загружаем текущие favorite ids.
+   */
+  useEffect(() => {
+    if (!user) {
+      setIsFavorite(
+        false
+      );
+
+      return;
+    }
+
+    let cancelled =
+      false;
+
+    getFavoriteIds()
+      .then(
+        (
+          favoriteIds
+        ) => {
+          if (
+            cancelled
+          ) {
+            return;
+          }
+
+          setIsFavorite(
+            favoriteIds.includes(
+              listing.id
+            )
+          );
+        }
+      )
+      .catch(
+        (
+          error
+        ) => {
+          if (
+            cancelled
+          ) {
+            return;
+          }
+
+          console.error(
+            "[ListingPopup] Favorite state load failed:",
+            error
+          );
+
+          setIsFavorite(
+            false
+          );
+        }
+      );
+
+    return () => {
+      cancelled =
+        true;
+    };
+  }, [
+    user,
+    listing.id,
+  ]);
 
   /*
    * Secure contacts.
@@ -473,6 +557,83 @@ export default function ListingPopup({
       contacts?.whatsapp
     );
 
+  /*
+   * Favorite.
+   *
+   * Гость:
+   *   → AuthModal
+   *
+   * Авторизованный:
+   *   → toggleFavorite()
+   *
+   * После успешного действия:
+   *   1. меняем сердце сразу;
+   *   2. отправляем событие Sidebar;
+   */
+  const handleFavorite =
+    async () => {
+      if (!user) {
+        setAuthModalOpen(
+          true
+        );
+
+        return;
+      }
+
+      if (
+        favoriteLoading
+      ) {
+        return;
+      }
+
+      setFavoriteLoading(
+        true
+      );
+
+      try {
+        const nextState =
+          await toggleFavorite(
+            listing.id
+          );
+
+        /*
+         * Немедленно обновляем Popup.
+         */
+        setIsFavorite(
+          nextState
+        );
+
+        /*
+         * Сообщаем FavoritesWorkspace,
+         * что список изменился.
+         */
+        window.dispatchEvent(
+          new CustomEvent(
+            FAVORITE_EVENT,
+            {
+              detail: {
+                listingId:
+                  listing.id,
+                isFavorite:
+                  nextState,
+              },
+            }
+          )
+        );
+      } catch (
+        error
+      ) {
+        console.error(
+          "[ListingPopup] Favorite update failed:",
+          error
+        );
+      } finally {
+        setFavoriteLoading(
+          false
+        );
+      }
+    };
+
   return (
     <>
       <div className="fixed inset-0 z-[60] flex items-center justify-center">
@@ -508,11 +669,36 @@ export default function ListingPopup({
           <div className="absolute top-3 left-3 right-3 z-10 flex justify-between pointer-events-none">
             <button
               type="button"
-              className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white/70 transition hover:bg-black/60 hover:text-white"
-              aria-label="В избранное"
+              onClick={
+                handleFavorite
+              }
+              disabled={
+                favoriteLoading
+              }
+              className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full bg-black/40 transition hover:bg-black/60 disabled:cursor-not-allowed disabled:opacity-60"
+              style={{
+                color:
+                  isFavorite
+                    ? "#6FC9C2"
+                    : "rgba(255,255,255,0.70)",
+              }}
+              aria-label={
+                isFavorite
+                  ? "Убрать из избранного"
+                  : "Добавить в избранное"
+              }
+              aria-pressed={
+                isFavorite
+              }
             >
               <HeartOutlineIcon
                 size={18}
+                style={{
+                  color:
+                    isFavorite
+                      ? "#6FC9C2"
+                      : "rgba(255,255,255,0.70)",
+                }}
               />
             </button>
 

@@ -11,11 +11,15 @@ import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 import { MAP_CONFIG } from "./mapConfig";
+
 import {
   setupMapLayers,
   updateMapLanguage,
 } from "./mapLayers";
-import { setupClusterLayer } from "./clusters";
+
+import {
+  setupClusterLayer,
+} from "./clusters";
 
 import {
   fetchListingsGeoJSON,
@@ -25,11 +29,21 @@ import type {
   ListingsFilter,
 } from "@/lib/filters/types";
 
-import { useTranslation } from "@/lib/i18n";
+import {
+  useTranslation,
+} from "@/lib/i18n";
 
-import type { City } from "@/lib/cities";
-import type { PopupListing } from "./ListingPopup";
-import type { ListingFeature } from "./clusters/types";
+import type {
+  City,
+} from "@/lib/cities";
+
+import type {
+  PopupListing,
+} from "./ListingPopup";
+
+import type {
+  ListingFeature,
+} from "./clusters/types";
 
 interface MainMapProps {
   /**
@@ -52,35 +66,70 @@ interface MainMapProps {
   onListingSelect?: (
     listing: PopupListing
   ) => void;
+
+  /**
+   * Объявление, выбранное из "Избранного".
+   *
+   * MainMap перемещает камеру
+   * к его координатам.
+   */
+  focusedListing?: {
+    id: string;
+
+    coordinates: [
+      number,
+      number
+    ];
+  } | null;
 }
 
-const CITY_FLY_TO_ZOOM = 11.5;
-const CITY_FLY_TO_DURATION = 1800;
-const DEBOUNCE_MS = 300;
+const CITY_FLY_TO_ZOOM =
+  11.5;
+
+const CITY_FLY_TO_DURATION =
+  1800;
+
+const FAVORITE_FLY_TO_ZOOM =
+  15;
+
+const FAVORITE_FLY_TO_DURATION =
+  900;
+
+const DEBOUNCE_MS =
+  300;
 
 export default function MainMap({
   selectedCity = null,
   filters,
   onListingSelect,
+  focusedListing = null,
 }: MainMapProps) {
   const mapContainer =
-    useRef<HTMLDivElement>(null);
+    useRef<HTMLDivElement>(
+      null
+    );
 
   const mapRef =
-    useRef<maplibregl.Map | null>(null);
+    useRef<
+      maplibregl.Map | null
+    >(null);
 
   const clusterHandleRef =
     useRef<
-      ReturnType<typeof setupClusterLayer> | null
+      ReturnType<
+        typeof setupClusterLayer
+      > | null
     >(null);
 
   /**
    * Таймер debounce для запросов.
    */
   const loadTimerRef =
-    useRef<ReturnType<typeof setTimeout> | null>(
-      null
-    );
+    useRef<
+      ReturnType<
+        typeof setTimeout
+      > | null
+    >(null);
 
   /**
    * Карта готова к загрузке данных.
@@ -102,10 +151,16 @@ export default function MainMap({
   const requestIdRef =
     useRef(0);
 
-  const [isLoaded, setIsLoaded] =
+  const [
+    isLoaded,
+    setIsLoaded,
+  ] =
     useState(false);
 
-  const { t, language } =
+  const {
+    t,
+    language,
+  } =
     useTranslation();
 
   /**
@@ -142,6 +197,7 @@ export default function MainMap({
           "/map/styles/light.json",
 
         pitch: 0,
+
         bearing: 0,
 
         minZoom:
@@ -159,214 +215,241 @@ export default function MainMap({
         renderWorldCopies:
           false,
 
-        antialias: true,
+        antialias:
+          true,
 
-        fadeDuration: 300,
+        fadeDuration:
+          300,
       });
 
     map.dragRotate.disable();
+
     map.touchZoomRotate.disableRotation();
 
-    mapRef.current = map;
+    mapRef.current =
+      map;
 
     /**
      * MapLibre load.
      */
-    map.on("load", () => {
-      setupMapLayers(
-        map,
-        languageRef.current
-      );
+    map.on(
+      "load",
+      () => {
+        setupMapLayers(
+          map,
+          languageRef.current
+        );
 
-      clusterHandleRef.current =
-        setupClusterLayer(map, {
-          data: [],
-          minZoom:
-            CITY_FLY_TO_ZOOM,
-        });
+        clusterHandleRef.current =
+          setupClusterLayer(
+            map,
+            {
+              data: [],
 
-      /**
-       * Click on price marker.
-       */
-      map.on(
-        "click",
-        "jaymap-price-marker",
-        (event) => {
-          if (
-            !event.features?.length
-          ) {
-            return;
-          }
+              minZoom:
+                CITY_FLY_TO_ZOOM,
+            }
+          );
 
-          const props =
-            event.features[0]
-              .properties as Record<
-              string,
-              unknown
-            >;
+        /**
+         * Click on price marker.
+         */
+        map.on(
+          "click",
+          "jaymap-price-marker",
+          (event) => {
+            if (
+              !event.features?.length
+            ) {
+              return;
+            }
 
-          onListingSelect?.({
-            id: String(
-              props.id
-            ),
+            const props =
+              event
+                .features[0]
+                .properties as Record<
+                string,
+                unknown
+              >;
 
-            title: String(
-              props.title ??
-                "Без названия"
-            ),
+            onListingSelect?.({
+              id:
+                String(
+                  props.id
+                ),
 
-            price: Number(
-              props.price ?? 0
-            ),
+              title:
+                String(
+                  props.title ??
+                    "Без названия"
+                ),
 
-            currency: String(
-              props.currency ??
-                "KGS"
-            ),
+              price:
+                Number(
+                  props.price ??
+                    0
+                ),
 
-            address:
-              props.address
-                ? String(
-                    props.address
-                  )
-                : undefined,
+              currency:
+                String(
+                  props.currency ??
+                    "KGS"
+                ),
 
-            photos:
-              safeParsePhotos(
-                props.photos
-              ),
+              address:
+                props.address
+                  ? String(
+                      props.address
+                    )
+                  : undefined,
 
-            phone:
-              props.phone
-                ? String(
-                    props.phone
-                  )
-                : undefined,
+              photos:
+                safeParsePhotos(
+                  props.photos
+                ),
 
-            telegram:
-              props.telegram
-                ? String(
-                    props.telegram
-                  )
-                : undefined,
+              phone:
+                props.phone
+                  ? String(
+                      props.phone
+                    )
+                  : undefined,
 
-            whatsapp:
-              props.whatsapp
-                ? String(
-                    props.whatsapp
-                  )
-                : undefined,
+              telegram:
+                props.telegram
+                  ? String(
+                      props.telegram
+                    )
+                  : undefined,
 
-            description:
-              props.description
-                ? String(
-                    props.description
-                  )
-                : undefined,
+              whatsapp:
+                props.whatsapp
+                  ? String(
+                      props.whatsapp
+                    )
+                  : undefined,
 
-            rooms:
-              props.rooms != null
-                ? Number(
-                    props.rooms
-                  )
-                : undefined,
+              description:
+                props.description
+                  ? String(
+                      props.description
+                    )
+                  : undefined,
 
-            area:
-              props.area != null
-                ? Number(
-                    props.area
-                  )
-                : undefined,
+              rooms:
+                props.rooms !=
+                  null
+                  ? Number(
+                      props.rooms
+                    )
+                  : undefined,
 
-            floor:
-              props.floor != null
-                ? Number(
-                    props.floor
-                  )
-                : undefined,
+              area:
+                props.area !=
+                  null
+                  ? Number(
+                      props.area
+                    )
+                  : undefined,
 
-            totalFloors:
-              props.total_floors !=
-              null
-                ? Number(
-                    props.total_floors
-                  )
-                : undefined,
+              floor:
+                props.floor !=
+                  null
+                  ? Number(
+                      props.floor
+                    )
+                  : undefined,
 
-            furnished:
-              props.furnished ===
-              true,
+              totalFloors:
+                props.total_floors !=
+                null
+                  ? Number(
+                      props.total_floors
+                    )
+                  : undefined,
 
-            parking:
-              props.parking ===
-              true,
+              furnished:
+                props.furnished ===
+                true,
 
-            pets:
-              props.pets === true,
-          });
-        }
-      );
+              parking:
+                props.parking ===
+                true,
 
-      /**
-       * Marker cursor.
-       */
-      map.on(
-        "mouseenter",
-        "jaymap-price-marker",
-        () => {
-          map.getCanvas()
-            .style.cursor =
-            "pointer";
-        }
-      );
-
-      map.on(
-        "mouseleave",
-        "jaymap-price-marker",
-        () => {
-          map.getCanvas()
-            .style.cursor = "";
-        }
-      );
-
-      /**
-       * Initial camera position.
-       */
-      map.jumpTo({
-        center: [
-          74.95,
-          41.45,
-        ],
-        zoom: 6.7,
-      });
-
-      /**
-       * At low zoom we don't allow arbitrary horizontal
-       * dragging away from the initial country view.
-       */
-      map.dragPan.disable();
-
-      map.on(
-        "zoomend",
-        () => {
-          if (
-            map.getZoom() > 6.8
-          ) {
-            map.dragPan.enable();
-          } else {
-            map.dragPan.disable();
-
-            map.easeTo({
-              center: [
-                74.95,
-                41.45,
-              ],
-              duration: 200,
+              pets:
+                props.pets ===
+                true,
             });
           }
-        }
-      );
-    });
+        );
+
+        /**
+         * Marker cursor.
+         */
+        map.on(
+          "mouseenter",
+          "jaymap-price-marker",
+          () => {
+            map.getCanvas()
+              .style.cursor =
+              "pointer";
+          }
+        );
+
+        map.on(
+          "mouseleave",
+          "jaymap-price-marker",
+          () => {
+            map.getCanvas()
+              .style.cursor =
+              "";
+          }
+        );
+
+        /**
+         * Initial camera position.
+         */
+        map.jumpTo({
+          center: [
+            74.95,
+            41.45,
+          ],
+
+          zoom:
+            6.7,
+        });
+
+        /**
+         * At low zoom we don't allow arbitrary horizontal
+         * dragging away from the initial country view.
+         */
+        map.dragPan.disable();
+
+        map.on(
+          "zoomend",
+          () => {
+            if (
+              map.getZoom() >
+              6.8
+            ) {
+              map.dragPan.enable();
+            } else {
+              map.dragPan.disable();
+
+              map.easeTo({
+                center: [
+                  74.95,
+                  41.45,
+                ],
+
+                duration:
+                  200,
+              });
+            }
+          }
+        );
+      }
+    );
 
     /**
      * One idle listener only.
@@ -374,7 +457,10 @@ export default function MainMap({
     map.once(
       "idle",
       () => {
-        setIsLoaded(true);
+        setIsLoaded(
+          true
+        );
+
         isReadyRef.current =
           true;
       }
@@ -384,7 +470,8 @@ export default function MainMap({
       isReadyRef.current =
         false;
 
-      requestIdRef.current += 1;
+      requestIdRef.current +=
+        1;
 
       if (
         loadTimerRef.current
@@ -407,144 +494,164 @@ export default function MainMap({
       mapRef.current =
         null;
     };
-  }, [onListingSelect]);
+  }, [
+    onListingSelect,
+  ]);
 
   /* =========================================================
      LOAD LISTINGS
      ========================================================= */
 
   const loadListings =
-    useCallback(async () => {
-      if (
-        !mapRef.current ||
-        !isReadyRef.current ||
-        !clusterHandleRef.current
-      ) {
-        return;
-      }
-
-      const map =
-        mapRef.current;
-
-      const bounds =
-        map.getBounds();
-
-      const currentRequestId =
-        ++requestIdRef.current;
-
-      try {
-        const geojson =
-          await fetchListingsGeoJSON(
-            {
-              ...filters,
-
-              bounds: {
-                west:
-                  bounds.getWest(),
-
-                south:
-                  bounds.getSouth(),
-
-                east:
-                  bounds.getEast(),
-
-                north:
-                  bounds.getNorth(),
-              },
-            }
-          );
-
-        /**
-         * Обновление устаревшим ответом запрещено.
-         */
+    useCallback(
+      async () => {
         if (
-          currentRequestId !==
-          requestIdRef.current
+          !mapRef.current ||
+          !isReadyRef.current ||
+          !clusterHandleRef.current
         ) {
           return;
         }
 
-        const listings =
-          geojson.features.filter(
-            (
-              feature
-            ): feature is ListingFeature => {
-              if (
-                feature.geometry
-                  ?.type !==
-                "Point"
-              ) {
-                return false;
+        const map =
+          mapRef.current;
+
+        const bounds =
+          map.getBounds();
+
+        const currentRequestId =
+          ++requestIdRef.current;
+
+        try {
+          const geojson =
+            await fetchListingsGeoJSON(
+              {
+                ...filters,
+
+                bounds: {
+                  west:
+                    bounds.getWest(),
+
+                  south:
+                    bounds.getSouth(),
+
+                  east:
+                    bounds.getEast(),
+
+                  north:
+                    bounds.getNorth(),
+                },
               }
+            );
 
-              const props =
-                feature.properties as
-                  | Record<
-                      string,
-                      unknown
-                    >
-                  | null;
+          /**
+           * Обновление устаревшим ответом запрещено.
+           */
+          if (
+            currentRequestId !==
+            requestIdRef.current
+          ) {
+            return;
+          }
 
-              return (
-                props !==
-                  null &&
-                typeof props.price ===
-                  "number"
-              );
-            }
+          const listings =
+            geojson.features.filter(
+              (
+                feature
+              ): feature is ListingFeature => {
+                if (
+                  feature.geometry
+                    ?.type !==
+                  "Point"
+                ) {
+                  return false;
+                }
+
+                const props =
+                  feature
+                    .properties as
+                    | Record<
+                        string,
+                        unknown
+                      >
+                    | null;
+
+                return (
+                  props !==
+                    null &&
+                  typeof props.price ===
+                    "number"
+                );
+              }
+            );
+
+          clusterHandleRef.current?.setData(
+            listings
           );
-
-        clusterHandleRef.current?.setData(
-          listings
-        );
-      } catch (error) {
-        /**
-         * Если другой запрос уже стал актуальным,
-         * старую ошибку тоже игнорируем.
-         */
-        if (
-          currentRequestId !==
-          requestIdRef.current
-        ) {
-          return;
-        }
-
-        console.error(
-          "[MainMap] Failed to load listings:",
+        } catch (
           error
-        );
-      }
-    }, [filters]);
+        ) {
+          /**
+           * Если другой запрос уже стал актуальным,
+           * старую ошибку тоже игнорируем.
+           */
+          if (
+            currentRequestId !==
+            requestIdRef.current
+          ) {
+            return;
+          }
+
+          console.error(
+            "[MainMap] Failed to load listings:",
+            error
+          );
+        }
+      },
+      [
+        filters,
+      ]
+    );
 
   /* =========================================================
      DEBOUNCE
      ========================================================= */
 
   const scheduleLoad =
-    useCallback(() => {
-      if (
-        loadTimerRef.current
-      ) {
-        clearTimeout(
+    useCallback(
+      () => {
+        if (
           loadTimerRef.current
-        );
-      }
+        ) {
+          clearTimeout(
+            loadTimerRef.current
+          );
+        }
 
-      loadTimerRef.current =
-        setTimeout(() => {
-          loadTimerRef.current =
-            null;
+        loadTimerRef.current =
+          setTimeout(
+            () => {
+              loadTimerRef.current =
+                null;
 
-          void loadListings();
-        }, DEBOUNCE_MS);
-    }, [loadListings]);
+              void loadListings();
+            },
+            DEBOUNCE_MS
+          );
+      },
+      [
+        loadListings,
+      ]
+    );
 
   /* =========================================================
      FILTER CHANGES
      ========================================================= */
 
   useEffect(() => {
-    if (!isLoaded) {
+    if (
+      !isLoaded
+    ) {
       return;
     }
 
@@ -596,7 +703,9 @@ export default function MainMap({
      ========================================================= */
 
   useEffect(() => {
-    if (!isLoaded) {
+    if (
+      !isLoaded
+    ) {
       return;
     }
 
@@ -650,10 +759,49 @@ export default function MainMap({
       duration:
         CITY_FLY_TO_DURATION,
 
-      essential: true,
+      essential:
+        true,
     });
   }, [
     selectedCity,
+    isLoaded,
+  ]);
+
+  /* =========================================================
+     FAVORITE FLY-TO
+     =========================================================
+     
+     Вызывается, когда пользователь нажимает
+     на объявление в Sidebar → Избранное.
+     
+     Никакой отдельной карты не создаём.
+     Используем существующий MapLibre instance.
+     ========================================================= */
+
+  useEffect(() => {
+    if (
+      !isLoaded ||
+      !mapRef.current ||
+      !focusedListing
+    ) {
+      return;
+    }
+
+    mapRef.current.flyTo({
+      center:
+        focusedListing.coordinates,
+
+      zoom:
+        FAVORITE_FLY_TO_ZOOM,
+
+      duration:
+        FAVORITE_FLY_TO_DURATION,
+
+      essential:
+        true,
+    });
+  }, [
+    focusedListing,
     isLoaded,
   ]);
 
@@ -665,7 +813,9 @@ export default function MainMap({
     <div className="relative h-full w-full overflow-hidden bg-transparent">
       {/* Map */}
       <div
-        ref={mapContainer}
+        ref={
+          mapContainer
+        }
         className={[
           "absolute inset-0",
           "transition-opacity",
@@ -707,14 +857,17 @@ export default function MainMap({
             </h1>
 
             <p className="mt-3 text-xs uppercase tracking-[0.3em] text-neutral-400">
-              {t("map.preparing")}
+              {t(
+                "map.preparing"
+              )}
             </p>
 
             <div className="mt-6 h-px w-24 overflow-hidden rounded-full bg-neutral-200">
               <div
                 className="h-full bg-neutral-900 animate-pulse"
                 style={{
-                  width: "65%",
+                  width:
+                    "65%",
                 }}
               />
             </div>
@@ -732,14 +885,23 @@ export default function MainMap({
 function safeParsePhotos(
   raw: unknown
 ): string[] | undefined {
-  if (Array.isArray(raw)) {
+  if (
+    Array.isArray(
+      raw
+    )
+  ) {
     return raw as string[];
   }
 
-  if (typeof raw === "string") {
+  if (
+    typeof raw ===
+    "string"
+  ) {
     try {
       const parsed =
-        JSON.parse(raw);
+        JSON.parse(
+          raw
+        );
 
       return Array.isArray(
         parsed

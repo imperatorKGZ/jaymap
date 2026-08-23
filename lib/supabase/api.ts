@@ -441,7 +441,364 @@ export async function getMyListings() {
 
   return data ?? [];
 }
+/* ============================================================
+   FAVORITES
+   ============================================================ */
 
+export interface FavoriteListing {
+  id: string;
+
+  title: string;
+
+  price: number;
+
+  currency: string;
+
+  address: string | null;
+
+  photos: string[];
+
+  description: string | null;
+
+  rooms: number | null;
+
+  area: number | null;
+
+  floor: number | null;
+
+  total_floors: number | null;
+
+  furnished: boolean;
+
+  parking: boolean;
+
+  pets: boolean;
+
+  coordinates: [
+    number,
+    number
+  ];
+
+  favorited_at: string;
+}
+
+/**
+ * Проверяет, находится ли объявление
+ * в избранном текущего пользователя.
+ */
+export async function isListingFavorite(
+  listingId: string
+): Promise<boolean> {
+  const {
+    data: {
+      user,
+    },
+  } =
+    await supabase.auth.getUser();
+
+  if (!user) {
+    return false;
+  }
+
+  const {
+    data,
+    error,
+  } =
+    await supabase
+      .from("favorites")
+      .select("listing_id")
+      .eq(
+        "user_id",
+        user.id
+      )
+      .eq(
+        "listing_id",
+        listingId
+      )
+      .maybeSingle();
+
+  if (error) {
+    console.error(
+      "[API] isListingFavorite error:",
+      error
+    );
+
+    throw error;
+  }
+
+  return Boolean(
+    data
+  );
+}
+
+/**
+ * Добавляет объявление
+ * в избранное.
+ */
+export async function addFavorite(
+  listingId: string
+) {
+  const {
+    data: {
+      user,
+    },
+  } =
+    await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error(
+      "Unauthorized"
+    );
+  }
+
+  const {
+    error,
+  } =
+    await supabase
+      .from("favorites")
+      .insert({
+        user_id:
+          user.id,
+
+        listing_id:
+          listingId,
+      });
+
+  if (error) {
+    /*
+     * 23505 = уже существует.
+     * Для toggle это не критическая ошибка.
+     */
+    if (
+      error.code ===
+      "23505"
+    ) {
+      return;
+    }
+
+    console.error(
+      "[API] addFavorite error:",
+      error
+    );
+
+    throw error;
+  }
+}
+
+/**
+ * Удаляет объявление
+ * из избранного.
+ */
+export async function removeFavorite(
+  listingId: string
+) {
+  const {
+    data: {
+      user,
+    },
+  } =
+    await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error(
+      "Unauthorized"
+    );
+  }
+
+  const {
+    error,
+  } =
+    await supabase
+      .from("favorites")
+      .delete()
+      .eq(
+        "user_id",
+        user.id
+      )
+      .eq(
+        "listing_id",
+        listingId
+      );
+
+  if (error) {
+    console.error(
+      "[API] removeFavorite error:",
+      error
+    );
+
+    throw error;
+  }
+}
+
+/**
+ * Получает избранные объявления.
+ *
+ * RPC возвращает только активные
+ * опубликованные объявления.
+ */
+export async function getMyFavorites(): Promise<
+  FavoriteListing[]
+> {
+  const {
+    data: {
+      user,
+    },
+  } =
+    await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error(
+      "Unauthorized"
+    );
+  }
+
+  const {
+    data,
+    error,
+  } =
+    await supabase.rpc(
+      "get_my_favorites"
+    );
+
+  if (error) {
+    console.error(
+      "[API] getMyFavorites error:",
+      error
+    );
+
+    throw error;
+  }
+
+  if (
+    !Array.isArray(
+      data
+    )
+  ) {
+    return [];
+  }
+
+  return data.map(
+    (
+      item: any
+    ) => ({
+      id:
+        String(
+          item.id
+        ),
+
+      title:
+        String(
+          item.title ??
+          "Без названия"
+        ),
+
+      price:
+        Number(
+          item.price ?? 0
+        ),
+
+      currency:
+        String(
+          item.currency ??
+          "KGS"
+        ),
+
+      address:
+        item.address
+          ? String(
+              item.address
+            )
+          : null,
+
+      photos:
+        Array.isArray(
+          item.photos
+        )
+          ? item.photos.map(
+              (
+                photo: unknown
+              ) =>
+                String(
+                  photo
+                )
+            )
+          : [],
+
+      description:
+        item.description
+          ? String(
+              item.description
+            )
+          : null,
+
+      rooms:
+        item.rooms != null
+          ? Number(
+              item.rooms
+            )
+          : null,
+
+      area:
+        item.area != null
+          ? Number(
+              item.area
+            )
+          : null,
+
+      floor:
+        item.floor != null
+          ? Number(
+              item.floor
+            )
+          : null,
+
+      total_floors:
+        item.total_floors !=
+        null
+          ? Number(
+              item.total_floors
+            )
+          : null,
+
+      furnished:
+        item.furnished ===
+        true,
+
+      parking:
+        item.parking ===
+        true,
+
+      pets:
+        item.pets ===
+        true,
+
+      coordinates:
+        Array.isArray(
+          item.coordinates
+        ) &&
+        item.coordinates.length >=
+          2
+          ? [
+              Number(
+                item.coordinates[0]
+              ),
+              Number(
+                item.coordinates[1]
+              ),
+            ]
+          : [
+              0,
+              0,
+            ],
+
+      favorited_at:
+        String(
+          item.favorited_at ??
+          ""
+        ),
+    })
+  );
+}
 /* ============================================================
    Управление моими объявлениями
    ============================================================ */

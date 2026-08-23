@@ -20,6 +20,10 @@ import type { WorkspaceProps } from "./workspaces/types";
 import { WORKSPACE_DEFAULTS } from "@/lib/filters/defaults";
 import { useTranslation } from "@/lib/i18n";
 
+import type {
+  FavoriteListing,
+} from "@/lib/supabase/api";
+
 const WORKSPACE_REGISTRY: Record<string, ReturnType<typeof lazy>> = {
   rental: lazy(() => import("./workspaces/RentalWorkspace")),
   commercial: lazy(() => import("./workspaces/CommercialWorkspace")),
@@ -70,6 +74,10 @@ interface WorkspaceRendererProps {
   ) => void;
 
   onSubmit?: () => void;
+
+  onFavoriteSelect?: (
+    favorite: FavoriteListing
+  ) => void;
 }
 
 function WorkspaceRendererBase({
@@ -78,6 +86,7 @@ function WorkspaceRendererBase({
   getSectionFilters,
   setFilter,
   onSubmit,
+  onFavoriteSelect,
 }: WorkspaceRendererProps) {
   const Component = WORKSPACE_REGISTRY[workspaceKey];
 
@@ -107,6 +116,7 @@ function WorkspaceRendererBase({
         values={values}
         setValue={setValue}
         onSubmit={onSubmit}
+        onFavoriteSelect={onFavoriteSelect}
       />
     </Suspense>
   );
