@@ -9,8 +9,13 @@
  * ------------------------------------------------------------
  */
 
-import { supabase } from "./client";
-import type { Database } from "./database.types";
+import {
+  supabase,
+} from "./client";
+
+import type {
+  Database,
+} from "./database.types";
 
 import type {
   ListingsFilter,
@@ -22,6 +27,12 @@ type ListingRow =
 
 type ListingInsert =
   Database["public"]["Tables"]["listings"]["Insert"];
+
+export type ListingStatus =
+  | "draft"
+  | "published"
+  | "paused"
+  | "archived";
 
 /**
  * Фильтр уровня API.
@@ -37,7 +48,9 @@ export type ListingQueryFilter =
 /**
  * Backward-compatible export.
  */
-export type { MapBounds };
+export type {
+  MapBounds,
+};
 
 /* ============================================================
    GeoJSON для карты
@@ -73,48 +86,56 @@ export async function fetchListingsGeoJSON(
   const {
     data,
     error,
-  } = await supabase.rpc(
-    "get_listings_geojson",
-    {
-      p_west: bounds.west,
-      p_south: bounds.south,
-      p_east: bounds.east,
-      p_north: bounds.north,
+  } =
+    await supabase.rpc(
+      "get_listings_geojson",
+      {
+        p_west:
+          bounds.west,
 
-      p_type:
-        type ?? null,
+        p_south:
+          bounds.south,
 
-      p_city_id:
-        cityId ?? null,
+        p_east:
+          bounds.east,
 
-      p_price_min:
-        priceMin ?? null,
+        p_north:
+          bounds.north,
 
-      p_price_max:
-        priceMax ?? null,
+        p_type:
+          type ?? null,
 
-      p_rooms:
-        rooms ?? null,
+        p_city_id:
+          cityId ?? null,
 
-      p_area_min:
-        areaMin ?? null,
+        p_price_min:
+          priceMin ?? null,
 
-      p_area_max:
-        areaMax ?? null,
+        p_price_max:
+          priceMax ?? null,
 
-      p_furnished:
-        furnished ?? null,
+        p_rooms:
+          rooms ?? null,
 
-      p_parking:
-        parking ?? null,
+        p_area_min:
+          areaMin ?? null,
 
-      p_pets:
-        pets ?? null,
+        p_area_max:
+          areaMax ?? null,
 
-      p_params:
-        params ?? null,
-    }
-  );
+        p_furnished:
+          furnished ?? null,
+
+        p_parking:
+          parking ?? null,
+
+        p_pets:
+          pets ?? null,
+
+        p_params:
+          params ?? null,
+      }
+    );
 
   if (error) {
     console.error(
@@ -127,7 +148,9 @@ export async function fetchListingsGeoJSON(
 
   return (
     data ?? {
-      type: "FeatureCollection",
+      type:
+        "FeatureCollection",
+
       features: [],
     }
   ) as GeoJSON.FeatureCollection;
@@ -161,15 +184,17 @@ export async function createListing(
   const {
     data: listing,
     error,
-  } = await supabase
-    .from("listings")
-    .insert({
-      ...rest,
-      coordinates:
-        `POINT(${lng} ${lat})`,
-    })
-    .select()
-    .single();
+  } =
+    await supabase
+      .from("listings")
+      .insert({
+        ...rest,
+
+        coordinates:
+          `POINT(${lng} ${lat})`,
+      })
+      .select()
+      .single();
 
   if (error) {
     console.error(
@@ -194,12 +219,14 @@ export async function getPublicListing(
   const {
     data,
     error,
-  } = await supabase.rpc(
-    "get_public_listing",
-    {
-      p_listing_id: id,
-    }
-  );
+  } =
+    await supabase.rpc(
+      "get_public_listing",
+      {
+        p_listing_id:
+          id,
+      }
+    );
 
   if (error) {
     console.error(
@@ -233,13 +260,14 @@ export async function getListingContacts(
   const {
     data,
     error,
-  } = await supabase.rpc(
-    "get_listing_contacts",
-    {
-      p_listing_id:
-        listingId,
-    }
-  );
+  } =
+    await supabase.rpc(
+      "get_listing_contacts",
+      {
+        p_listing_id:
+          listingId,
+      }
+    );
 
   if (error) {
     console.error(
@@ -272,11 +300,15 @@ export async function getListingById(
   const {
     data,
     error,
-  } = await supabase
-    .from("listings")
-    .select("*")
-    .eq("id", id)
-    .single();
+  } =
+    await supabase
+      .from("listings")
+      .select("*")
+      .eq(
+        "id",
+        id
+      )
+      .single();
 
   if (error) {
     console.error(
@@ -302,12 +334,16 @@ export async function updateListing(
   const {
     data,
     error,
-  } = await supabase
-    .from("listings")
-    .update(patch)
-    .eq("id", id)
-    .select()
-    .single();
+  } =
+    await supabase
+      .from("listings")
+      .update(patch)
+      .eq(
+        "id",
+        id
+      )
+      .select()
+      .single();
 
   if (error) {
     console.error(
@@ -360,6 +396,7 @@ export async function getMyListings() {
           created_at,
           updated_at,
           type,
+          status,
           price,
           currency,
           rooms,
@@ -388,7 +425,8 @@ export async function getMyListings() {
       .order(
         "created_at",
         {
-          ascending: false,
+          ascending:
+            false,
         }
       );
 
@@ -402,6 +440,320 @@ export async function getMyListings() {
   }
 
   return data ?? [];
+}
+
+/* ============================================================
+   Управление моими объявлениями
+   ============================================================ */
+
+/**
+ * Проверяет владельца и возвращает
+ * данные, необходимые для lifecycle/delete.
+ */
+async function getOwnedListingForManagement(
+  listingId: string
+) {
+  const {
+    data: {
+      user,
+    },
+  } =
+    await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error(
+      "Unauthorized"
+    );
+  }
+
+  const {
+    data,
+    error,
+  } =
+    await supabase
+      .from("listings")
+      .select(
+        `
+          id,
+          user_id,
+          status,
+          is_active,
+          photos
+        `
+      )
+      .eq(
+        "id",
+        listingId
+      )
+      .eq(
+        "user_id",
+        user.id
+      )
+      .single();
+
+  if (error) {
+    console.error(
+      "[API] getOwnedListingForManagement error:",
+      error
+    );
+
+    throw error;
+  }
+
+  return {
+    listing:
+      data,
+    userId:
+      user.id,
+  };
+}
+
+/**
+ * Меняет lifecycle status.
+ *
+ * DB trigger синхронизирует:
+ *
+ * published -> is_active=true
+ * всё остальное -> is_active=false
+ */
+export async function updateListingStatus(
+  listingId: string,
+  status: ListingStatus
+) {
+  const {
+    data: {
+      user,
+    },
+  } =
+    await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error(
+      "Unauthorized"
+    );
+  }
+
+  const {
+    data,
+    error,
+  } =
+    await supabase
+      .from("listings")
+      .update({
+        status,
+      })
+      .eq(
+        "id",
+        listingId
+      )
+      .eq(
+        "user_id",
+        user.id
+      )
+      .select(
+        `
+          id,
+          status,
+          is_active,
+          updated_at
+        `
+      )
+      .single();
+
+  if (error) {
+    console.error(
+      "[API] updateListingStatus error:",
+      error
+    );
+
+    throw error;
+  }
+
+  return data;
+}
+
+/**
+ * Опубликовать объявление.
+ */
+export async function publishListing(
+  listingId: string
+) {
+  return updateListingStatus(
+    listingId,
+    "published"
+  );
+}
+
+/**
+ * Приостановить объявление.
+ */
+export async function pauseListing(
+  listingId: string
+) {
+  return updateListingStatus(
+    listingId,
+    "paused"
+  );
+}
+
+/**
+ * Опубликовать заново.
+ */
+export async function resumeListing(
+  listingId: string
+) {
+  return updateListingStatus(
+    listingId,
+    "published"
+  );
+}
+
+/**
+ * Получить путь Storage-объекта
+ * из публичного URL.
+ *
+ * Ожидаемый URL:
+ *
+ * /storage/v1/object/public/listing-photos/...
+ */
+function getListingPhotoPath(
+  url: string
+): string | null {
+  const marker =
+    "/storage/v1/object/public/listing-photos/";
+
+  const index =
+    url.indexOf(
+      marker
+    );
+
+  if (
+    index === -1
+  ) {
+    return null;
+  }
+
+  const path =
+    url.slice(
+      index +
+        marker.length
+    );
+
+  if (!path) {
+    return null;
+  }
+
+  return decodeURIComponent(
+    path
+  );
+}
+
+/**
+ * Полное удаление объявления.
+ *
+ * 1. Проверяем владельца.
+ * 2. Пытаемся определить все photo paths.
+ * 3. Удаляем их из Storage.
+ * 4. Удаляем listing.
+ *
+ * favorites удаляются каскадно
+ * на уровне БД.
+ */
+export async function deleteListingPermanently(
+  listingId: string
+) {
+  const {
+    listing,
+    userId,
+  } =
+    await getOwnedListingForManagement(
+      listingId
+    );
+
+  const photoPaths =
+    (
+      listing.photos ??
+      []
+    )
+      .map(
+        (
+          url
+        ) =>
+          getListingPhotoPath(
+            url
+          )
+      )
+      .filter(
+        (
+          path
+        ): path is string =>
+          Boolean(
+            path
+          )
+      );
+
+  /**
+   * Удаляем файлы из Storage.
+   */
+  if (
+    photoPaths.length >
+    0
+  ) {
+    const {
+      error:
+        storageError,
+    } =
+      await supabase.storage
+        .from(
+          "listing-photos"
+        )
+        .remove(
+          photoPaths
+        );
+
+    if (
+      storageError
+    ) {
+      console.error(
+        "[API] deleteListingPermanently storage error:",
+        storageError
+      );
+
+      throw storageError;
+    }
+  }
+
+  /**
+   * Удаляем строку объявления.
+   *
+   * RLS + user_id защищают
+   * операцию владельцем.
+   */
+  const {
+    error,
+  } =
+    await supabase
+      .from("listings")
+      .delete()
+      .eq(
+        "id",
+        listingId
+      )
+      .eq(
+        "user_id",
+        userId
+      );
+
+  if (error) {
+    console.error(
+      "[API] deleteListingPermanently database error:",
+      error
+    );
+
+    throw error;
+  }
+
+  return true;
 }
 
 /* ============================================================
@@ -483,6 +835,7 @@ export async function toggleFavorite(
       .insert({
         listing_id:
           listingId,
+
         user_id:
           user.id,
       });
@@ -542,7 +895,9 @@ export async function getFavoriteIds(): Promise<
 
   return (
     data?.map(
-      (favorite) =>
+      (
+        favorite
+      ) =>
         favorite.listing_id
     ) ?? []
   );
@@ -552,8 +907,6 @@ export async function getFavoriteIds(): Promise<
  * Получает GeoJSON избранных объявлений.
  *
  * Временно используется существующий RPC.
- * Позже можно сделать отдельный server-side RPC
- * для favorites + viewport.
  */
 export async function getFavoritesGeoJSON(): Promise<
   GeoJSON.FeatureCollection
@@ -567,7 +920,9 @@ export async function getFavoritesGeoJSON(): Promise<
 
   if (!user) {
     return {
-      type: "FeatureCollection",
+      type:
+        "FeatureCollection",
+
       features: [],
     };
   }
@@ -579,21 +934,38 @@ export async function getFavoritesGeoJSON(): Promise<
     await supabase.rpc(
       "get_listings_geojson",
       {
-        p_west: -180,
-        p_south: -90,
-        p_east: 180,
-        p_north: 90,
+        p_west:
+          -180,
 
-        p_type: null,
-        p_city_id: null,
+        p_south:
+          -90,
 
-        p_price_min: null,
-        p_price_max: null,
+        p_east:
+          180,
 
-        p_rooms: null,
+        p_north:
+          90,
 
-        p_area_min: null,
-        p_area_max: null,
+        p_type:
+          null,
+
+        p_city_id:
+          null,
+
+        p_price_min:
+          null,
+
+        p_price_max:
+          null,
+
+        p_rooms:
+          null,
+
+        p_area_min:
+          null,
+
+        p_area_max:
+          null,
 
         p_furnished:
           null,
@@ -616,16 +988,22 @@ export async function getFavoritesGeoJSON(): Promise<
     );
 
     return {
-      type: "FeatureCollection",
+      type:
+        "FeatureCollection",
+
       features: [],
     };
   }
 
   const collection =
-    (data ?? {
-      type: "FeatureCollection",
-      features: [],
-    }) as GeoJSON.FeatureCollection;
+    (
+      data ?? {
+        type:
+          "FeatureCollection",
+
+        features: [],
+      }
+    ) as GeoJSON.FeatureCollection;
 
   const favoriteIds =
     await getFavoriteIds();
@@ -635,7 +1013,9 @@ export async function getFavoritesGeoJSON(): Promise<
 
     features:
       collection.features.filter(
-        (feature) => {
+        (
+          feature
+        ) => {
           const props =
             feature.properties as
               | Record<
@@ -695,9 +1075,11 @@ export async function uploadListingPhoto(
         file,
         {
           cacheControl:
-            "3600",
+            "31536000",
+
           upsert:
             false,
+
           contentType:
             file.type,
         }
@@ -724,97 +1106,4 @@ export async function uploadListingPhoto(
       );
 
   return data.publicUrl;
-}
-
-/**
- * Удаляет фото объявления.
- */
-export async function deleteListingPhoto(
-  url: string
-) {
-  const baseUrl =
-    supabase.storage
-      .from(
-        PHOTO_BUCKET
-      )
-      .getPublicUrl("")
-      .data
-      .publicUrl;
-
-  const path =
-    url
-      .replace(
-        baseUrl,
-        ""
-      )
-      .replace(
-        /^\//,
-        ""
-      );
-
-  const {
-    error,
-  } =
-    await supabase.storage
-      .from(
-        PHOTO_BUCKET
-      )
-      .remove([path]);
-
-  if (error) {
-    console.error(
-      "[API] deleteListingPhoto error:",
-      error
-    );
-
-    throw error;
-  }
-}
-
-/* ============================================================
-   Auth helpers
-   ============================================================ */
-
-export async function getCurrentUser() {
-  const {
-    data: {
-      user,
-    },
-    error,
-  } =
-    await supabase.auth.getUser();
-
-  if (error) {
-    return null;
-  }
-
-  return user;
-}
-
-export function onAuthStateChange(
-  callback: (
-    user:
-      Awaited<
-        ReturnType<
-          typeof supabase.auth.getUser
-        >
-      >["data"]["user"]
-  ) => void
-) {
-  const {
-    data,
-  } =
-    supabase.auth.onAuthStateChange(
-      (
-        _event,
-        session
-      ) => {
-        callback(
-          session?.user ??
-            null
-        );
-      }
-    );
-
-  return data.subscription;
 }

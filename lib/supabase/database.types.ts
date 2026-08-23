@@ -10,7 +10,9 @@ export type Json =
   | boolean
   | null
   | {
-      [key: string]: Json | undefined;
+      [key: string]:
+        | Json
+        | undefined;
     }
   | Json[];
 
@@ -112,6 +114,12 @@ export interface Database {
             | "land"
             | "daily";
 
+          status:
+            | "draft"
+            | "published"
+            | "paused"
+            | "archived";
+
           price: number;
           currency: string;
 
@@ -148,7 +156,9 @@ export interface Database {
 
           params: Json;
 
-          search_vector: unknown | null;
+          search_vector:
+            | unknown
+            | null;
         };
 
         Insert: {
@@ -161,6 +171,12 @@ export interface Database {
             | "commercial"
             | "land"
             | "daily";
+
+          status?:
+            | "draft"
+            | "published"
+            | "paused"
+            | "archived";
 
           price: number;
           currency?: string;
@@ -209,6 +225,12 @@ export interface Database {
             | "commercial"
             | "land"
             | "daily";
+
+          status?:
+            | "draft"
+            | "published"
+            | "paused"
+            | "archived";
 
           price?: number;
           currency?: string;
@@ -346,6 +368,10 @@ export interface Database {
 
           p_params?: Json;
         };
+
+        Returns: Json;
+      };
+
       get_public_listing: {
         Args: {
           p_listing_id: string;
@@ -359,8 +385,6 @@ export interface Database {
           p_listing_id: string;
         };
 
-        Returns: Json;
-      };
         Returns: Json;
       };
     };
