@@ -3,32 +3,50 @@
  * ------------------------------------------------------------
  * Рабочая область (правая часть раскрытой Sidebar, 288px).
  * Три взаимоисключающих состояния контента:
- *   1. "menu"      — список основных разделов (когда ничего не выбрано)
+ *   1. "menu"      — список основных разделов
  *   2. "workspace" — фильтры выбранного основного раздела
- *   3. "secondary" — вспомогательный раздел (оверлей поверх workspace,
- *                    не уничтожает activeMain и его фильтры)
- * Прокручивается только эта область — сама Sidebar не скроллится.
+ *   3. "secondary" — вспомогательный раздел
  * ------------------------------------------------------------
  */
 
-import { memo } from "react";
+import {
+  memo,
+} from "react";
 
-import { SidebarItem } from "./SidebarItem";
-import { SidebarHeader } from "./SidebarHeader";
-import { WorkspaceRenderer } from "./WorkspaceRenderer";
+import {
+  SidebarItem,
+} from "./SidebarItem";
 
-import type { SidebarSection } from "./sidebarConfig";
-import type { SidebarState } from "./useSidebarState";
+import {
+  SidebarHeader,
+} from "./SidebarHeader";
 
-import { useTranslation } from "@/lib/i18n";
+import {
+  WorkspaceRenderer,
+} from "./WorkspaceRenderer";
+
+import type {
+  SidebarSection,
+} from "./sidebarConfig";
+
+import type {
+  SidebarState,
+} from "./useSidebarState";
+
+import {
+  useTranslation,
+} from "@/lib/i18n";
 
 import type {
   FavoriteListing,
+  ListingHistoryItem,
 } from "@/lib/supabase/api";
 
 interface SidebarWorkspaceProps {
   mainSections: SidebarSection[];
+
   activeMainSection?: SidebarSection;
+
   secondarySection?: SidebarSection;
 
   state: Pick<
@@ -45,6 +63,10 @@ interface SidebarWorkspaceProps {
   onFavoriteSelect?: (
     favorite: FavoriteListing
   ) => void;
+
+  onHistorySelect?: (
+    item: ListingHistoryItem
+  ) => void;
 }
 
 function SidebarWorkspaceBase({
@@ -54,11 +76,15 @@ function SidebarWorkspaceBase({
   state,
   onApply,
   onFavoriteSelect,
+  onHistorySelect,
 }: SidebarWorkspaceProps) {
-  const { t } =
-    useTranslation();
+  const {
+    t,
+  } = useTranslation();
 
-  // 3. Вспомогательный раздел поверх всего — activeMain не трогаем.
+  /*
+   * Secondary workspace.
+   */
   if (secondarySection) {
     return (
       <div className="flex h-full flex-col">
@@ -95,13 +121,18 @@ function SidebarWorkspaceBase({
             onFavoriteSelect={
               onFavoriteSelect
             }
+            onHistorySelect={
+              onHistorySelect
+            }
           />
         </div>
       </div>
     );
   }
 
-  // 2. Рабочая область основного раздела.
+  /*
+   * Main workspace.
+   */
   if (activeMainSection) {
     return (
       <div className="flex h-full flex-col">
@@ -134,13 +165,18 @@ function SidebarWorkspaceBase({
             onFavoriteSelect={
               onFavoriteSelect
             }
+            onHistorySelect={
+              onHistorySelect
+            }
           />
         </div>
       </div>
     );
   }
 
-  // 1. Главное меню — список основных режимов приложения.
+  /*
+   * Main menu.
+   */
   return (
     <div className="flex h-full flex-col">
       <div className="px-3 pb-2 pt-5">

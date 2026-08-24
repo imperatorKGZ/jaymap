@@ -27,57 +27,52 @@ import type {
 
 import type {
   FavoriteListing,
+  ListingHistoryItem,
 } from "@/lib/supabase/api";
 
 export default function Home() {
   const [
     selectedCity,
     setSelectedCity,
-  ] =
-    useState<City | null>(
-      null
-    );
+  ] = useState<
+    City | null
+  >(null);
 
   const [
     appliedFilters,
     setAppliedFilters,
-  ] =
-    useState<
-      ListingsFilter | undefined
-    >(undefined);
+  ] = useState<
+    ListingsFilter | undefined
+  >(undefined);
 
   const [
     selectedListing,
     setSelectedListing,
-  ] =
-    useState<
-      PopupListing | null
-    >(null);
+  ] = useState<
+    PopupListing | null
+  >(null);
 
   /*
-   * Объявление, выбранное
-   * из "Избранного".
+   * Объявление, к которому карта должна
+   * переместиться.
    *
-   * MainMap получит его coordinates
-   * и выполнит flyTo().
+   * Используется и для Избранного,
+   * и для Истории.
    */
   const [
     focusedFavorite,
     setFocusedFavorite,
-  ] =
-    useState<{
-      id: string;
+  ] = useState<{
+    id: string;
 
-      coordinates: [
-        number,
-        number
-      ];
-    } | null>(null);
+    coordinates: [
+      number,
+      number
+    ];
+  } | null>(null);
 
   /**
    * Sidebar уже возвращает canonical ListingsFilter.
-   *
-   * Никакого повторного преобразования здесь нет.
    */
   const handleApplyFilters =
     useCallback(
@@ -98,14 +93,6 @@ export default function Home() {
   /**
    * Выбор объявления
    * из FavoritesWorkspace.
-   *
-   * Здесь мы сразу:
-   *
-   * 1. сохраняем координаты для MainMap;
-   * 2. подготавливаем PopupListing;
-   *
-   * После этого MainMap сделает flyTo(),
-   * а ListingPopup откроется.
    */
   const handleFavoriteSelect =
     useCallback(
@@ -173,6 +160,79 @@ export default function Home() {
       []
     );
 
+  /**
+   * Выбор объявления
+   * из HistoryWorkspace.
+   *
+   * ListingHistoryItem содержит те же
+   * данные, которые нужны Popup + карте.
+   */
+  const handleHistorySelect =
+    useCallback(
+      (
+        item: ListingHistoryItem
+      ) => {
+        setFocusedFavorite({
+          id:
+            item.id,
+
+          coordinates:
+            item.coordinates,
+        });
+
+        setSelectedListing({
+          id:
+            item.id,
+
+          title:
+            item.title,
+
+          price:
+            item.price,
+
+          currency:
+            item.currency,
+
+          address:
+            item.address ??
+            undefined,
+
+          photos:
+            item.photos,
+
+          description:
+            item.description ??
+            undefined,
+
+          rooms:
+            item.rooms ??
+            undefined,
+
+          area:
+            item.area ??
+            undefined,
+
+          floor:
+            item.floor ??
+            undefined,
+
+          totalFloors:
+            item.total_floors ??
+            undefined,
+
+          furnished:
+            item.furnished,
+
+          parking:
+            item.parking,
+
+          pets:
+            item.pets,
+        });
+      },
+      []
+    );
+
   return (
     <main className="relative h-screen w-screen overflow-hidden">
       {/* Фон */}
@@ -224,11 +284,17 @@ export default function Home() {
       {/* Sidebar */}
       <Sidebar
         theme="dark"
+
         onApplyFilters={
           handleApplyFilters
         }
+
         onFavoriteSelect={
           handleFavoriteSelect
+        }
+
+        onHistorySelect={
+          handleHistorySelect
         }
       />
 

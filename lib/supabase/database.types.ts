@@ -336,6 +336,26 @@ export interface Database {
           created_at?: string;
         };
       };
+
+      listing_views: {
+        Row: {
+          user_id: string;
+          listing_id: string;
+          viewed_at: string;
+        };
+
+        Insert: {
+          user_id: string;
+          listing_id: string;
+          viewed_at?: string;
+        };
+
+        Update: {
+          user_id?: string;
+          listing_id?: string;
+          viewed_at?: string;
+        };
+      };
     };
 
     Views: Record<
@@ -387,6 +407,7 @@ export interface Database {
 
         Returns: Json;
       };
+
       get_my_favorites: {
         Args: Record<
           string,
@@ -395,8 +416,25 @@ export interface Database {
 
         Returns: Json;
       };
+
+      record_listing_view: {
+        Args: {
+          p_listing_id: string;
+        };
+
+        Returns: undefined;
+      };
+
+      get_my_listing_history: {
+        Args: Record<
+          string,
+          never
+        >;
+
+        Returns: Json;
+      };
     };
-     
+
     Enums: Record<
       string,
       never

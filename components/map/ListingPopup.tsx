@@ -28,6 +28,7 @@ import AuthModal from "@/components/auth/AuthModal";
 import {
   getFavoriteIds,
   getListingContacts,
+  recordListingView,
   toggleFavorite,
 } from "@/lib/supabase/api";
 
@@ -46,12 +47,9 @@ export interface PopupListing {
   photos?: string[];
 
   /*
-   * Эти поля пока оставляем
+   * Эти поля оставляем
    * для совместимости с текущим
    * MainMap / PopupListing.
-   *
-   * ListingPopup больше НЕ использует
-   * их как источник контактов.
    */
   phone?: string;
   telegram?: string;
@@ -242,9 +240,30 @@ export default function ListingPopup({
   ]);
 
   /*
-   * Secure contacts.
+   * Listing view history.
    *
-   * ВАЖНО:
+   * Записываем просмотр только для
+   * авторизованного пользователя.
+   *
+   * ListingPopup монтируется при открытии
+   * объявления, поэтому это место фиксирует
+   * факт открытия карточки.
+   */
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    void recordListingView(
+      listing.id
+    );
+  }, [
+    user,
+    listing.id,
+  ]);
+
+  /*
+   * Secure contacts.
    *
    * Гость:
    *   RPC contacts НЕ вызывается.
@@ -568,7 +587,7 @@ export default function ListingPopup({
    *
    * После успешного действия:
    *   1. меняем сердце сразу;
-   *   2. отправляем событие Sidebar;
+   *   2. отправляем событие Sidebar.
    */
   const handleFavorite =
     async () => {

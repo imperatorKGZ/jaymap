@@ -441,6 +441,7 @@ export async function getMyListings() {
 
   return data ?? [];
 }
+
 /* ============================================================
    FAVORITES
    ============================================================ */
@@ -506,7 +507,9 @@ export async function isListingFavorite(
   } =
     await supabase
       .from("favorites")
-      .select("listing_id")
+      .select(
+        "listing_id"
+      )
       .eq(
         "user_id",
         user.id
@@ -694,7 +697,8 @@ export async function getMyFavorites(): Promise<
 
       price:
         Number(
-          item.price ?? 0
+          item.price ??
+          0
         ),
 
       currency:
@@ -732,21 +736,24 @@ export async function getMyFavorites(): Promise<
           : null,
 
       rooms:
-        item.rooms != null
+        item.rooms !=
+        null
           ? Number(
               item.rooms
             )
           : null,
 
       area:
-        item.area != null
+        item.area !=
+        null
           ? Number(
               item.area
             )
           : null,
 
       floor:
-        item.floor != null
+        item.floor !=
+        null
           ? Number(
               item.floor
             )
@@ -799,6 +806,7 @@ export async function getMyFavorites(): Promise<
     })
   );
 }
+
 /* ============================================================
    Управление моими объявлениями
    ============================================================ */
@@ -1145,7 +1153,9 @@ export async function toggleFavorite(
   } =
     await supabase
       .from("favorites")
-      .select("*")
+      .select(
+        "*"
+      )
       .eq(
         "listing_id",
         listingId
@@ -1257,6 +1267,271 @@ export async function getFavoriteIds(): Promise<
       ) =>
         favorite.listing_id
     ) ?? []
+  );
+}
+
+/* ============================================================
+   ИСТОРИЯ ПРОСМОТРОВ
+   ============================================================ */
+
+export interface ListingHistoryItem {
+  id: string;
+
+  title: string;
+
+  price: number;
+
+  currency: string;
+
+  address: string | null;
+
+  photos: string[];
+
+  description: string | null;
+
+  rooms: number | null;
+
+  area: number | null;
+
+  floor: number | null;
+
+  total_floors: number | null;
+
+  furnished: boolean;
+
+  parking: boolean;
+
+  pets: boolean;
+
+  coordinates: [
+    number,
+    number
+  ];
+
+  viewed_at: string;
+}
+
+/**
+ * Фиксирует просмотр объявления
+ * текущим авторизованным пользователем.
+ *
+ * Гость:
+ *   ничего не делает.
+ *
+ * Авторизованный:
+ *   RPC обновляет viewed_at
+ *   и чистит старые записи.
+ */
+export async function recordListingView(
+  listingId: string
+): Promise<void> {
+  const {
+    data: {
+      user,
+    },
+  } =
+    await supabase.auth.getUser();
+
+  if (!user) {
+    return;
+  }
+
+  const {
+    error,
+  } =
+    await supabase.rpc(
+      "record_listing_view",
+      {
+        p_listing_id:
+          listingId,
+      }
+    );
+
+  if (error) {
+    /*
+     * История просмотров не должна ломать
+     * открытие самого объявления.
+     */
+    console.error(
+      "[API] recordListingView error:",
+      error
+    );
+  }
+}
+
+/**
+ * Получает историю просмотров
+ * текущего пользователя.
+ *
+ * История уже ограничена RPC:
+ * - 30 дней
+ * - максимум 100 записей
+ */
+export async function getMyListingHistory(): Promise<
+  ListingHistoryItem[]
+> {
+  const {
+    data: {
+      user,
+    },
+  } =
+    await supabase.auth.getUser();
+
+  if (!user) {
+    return [];
+  }
+
+  const {
+    data,
+    error,
+  } =
+    await supabase.rpc(
+      "get_my_listing_history"
+    );
+
+  if (error) {
+    console.error(
+      "[API] getMyListingHistory error:",
+      error
+    );
+
+    throw error;
+  }
+
+  if (
+    !Array.isArray(
+      data
+    )
+  ) {
+    return [];
+  }
+
+  return data.map(
+    (
+      item: any
+    ) => ({
+      id:
+        String(
+          item.id
+        ),
+
+      title:
+        String(
+          item.title ??
+          "Без названия"
+        ),
+
+      price:
+        Number(
+          item.price ??
+          0
+        ),
+
+      currency:
+        String(
+          item.currency ??
+          "KGS"
+        ),
+
+      address:
+        item.address !=
+        null
+          ? String(
+              item.address
+            )
+          : null,
+
+      photos:
+        Array.isArray(
+          item.photos
+        )
+          ? item.photos.map(
+              (
+                photo: unknown
+              ) =>
+                String(
+                  photo
+                )
+            )
+          : [],
+
+      description:
+        item.description !=
+        null
+          ? String(
+              item.description
+            )
+          : null,
+
+      rooms:
+        item.rooms !=
+        null
+          ? Number(
+              item.rooms
+            )
+          : null,
+
+      area:
+        item.area !=
+        null
+          ? Number(
+              item.area
+            )
+          : null,
+
+      floor:
+        item.floor !=
+        null
+          ? Number(
+              item.floor
+            )
+          : null,
+
+      total_floors:
+        item.total_floors !=
+        null
+          ? Number(
+              item.total_floors
+            )
+          : null,
+
+      furnished:
+        item.furnished ===
+        true,
+
+      parking:
+        item.parking ===
+        true,
+
+      pets:
+        item.pets ===
+        true,
+
+      coordinates:
+        Array.isArray(
+          item.coordinates
+        ) &&
+        item.coordinates.length >=
+          2
+          ? [
+              Number(
+                item.coordinates[0]
+              ),
+              Number(
+                item.coordinates[1]
+              ),
+            ]
+          : [
+              0,
+              0,
+            ],
+
+      viewed_at:
+        String(
+          item.viewed_at ??
+          ""
+        ),
+    })
   );
 }
 

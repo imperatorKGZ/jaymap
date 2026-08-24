@@ -78,6 +78,7 @@ import {
 
 import type {
   FavoriteListing,
+  ListingHistoryItem,
 } from "@/lib/supabase/api";
 
 import "./theme.css";
@@ -110,6 +111,14 @@ interface SidebarProps {
   onFavoriteSelect?: (
     favorite: FavoriteListing
   ) => void;
+
+  /**
+   * Вызывается при выборе объявления
+   * из HistoryWorkspace.
+   */
+  onHistorySelect?: (
+    item: ListingHistoryItem
+  ) => void;
 }
 
 const RAIL_WIDTH = 56;
@@ -126,6 +135,8 @@ export default function Sidebar({
   onApplyFilters,
 
   onFavoriteSelect,
+
+  onHistorySelect,
 }: SidebarProps) {
   const {
     t,
@@ -665,6 +676,7 @@ export default function Sidebar({
                 handleSelectMain,
 
               closeMain,
+
               closeSecondary,
 
               getSectionFilters,
@@ -676,6 +688,9 @@ export default function Sidebar({
             }
             onFavoriteSelect={
               onFavoriteSelect
+            }
+            onHistorySelect={
+              onHistorySelect
             }
           />
         </div>
