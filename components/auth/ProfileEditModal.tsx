@@ -66,7 +66,10 @@ export default function ProfileEditModal({
     saving,
     setSaving,
   ] = useState(false);
-
+  const [
+    deletingAvatar,
+    setDeletingAvatar,
+  ] = useState(false);
   const [
     error,
     setError,
@@ -97,9 +100,7 @@ export default function ProfileEditModal({
     );
 
     setAvatarPreview(
-      profile?.avatar_url ??
-        user?.user_metadata?.avatar_url ??
-        user?.user_metadata?.picture ??
+      profile?.avatar_url?.trim() ||
         null
     );
 
@@ -247,7 +248,7 @@ export default function ProfileEditModal({
                 {
                   cacheControl:
                     "3600",
-                  upsert: true,
+                  upsert: false,
                   contentType:
                     selectedFile.type,
                 }
@@ -495,9 +496,7 @@ export default function ProfileEditModal({
             >
               {avatarPreview ? (
                 <img
-                  src={
-                    avatarPreview
-                  }
+                  src={avatarPreview}
                   alt=""
                   style={{
                     width:
@@ -509,38 +508,18 @@ export default function ProfileEditModal({
                   }}
                 />
               ) : (
-                <div
+                <img
+                  src="/jaymap-default-avatar.svg"
+                  alt="JayMap"
                   style={{
                     width:
                       "100%",
                     height:
                       "100%",
-                    display:
-                      "flex",
-                    alignItems:
-                      "center",
-                    justifyContent:
-                      "center",
-                    background:
-                      "rgba(111,201,194,0.16)",
-                    color:
-                      "#6FC9C2",
-                    fontSize:
-                      "32px",
-                    fontWeight:
-                      700,
+                    objectFit:
+                      "cover",
                   }}
-                >
-                  {(
-                    name ||
-                    "П"
-                  )
-                    .slice(
-                      0,
-                      1
-                    )
-                    .toUpperCase()}
-                </div>
+                />
               )}
 
               <div

@@ -139,12 +139,8 @@ function ProfileWorkspace(
     );
 
   const avatarUrl =
-    profile?.avatar_url ||
-    user?.user_metadata
-      ?.avatar_url ||
-    user?.user_metadata
-      ?.picture ||
-    null;
+  profile?.avatar_url?.trim() ||
+  null;
 
   const handleLogout =
     async () => {
@@ -399,14 +395,19 @@ function ProfileWorkspace(
               <img
                 src={avatarUrl}
                 alt={displayName}
+                onError={(event) => {
+                  event.currentTarget.onerror = null;
+                  event.currentTarget.src =
+                    "/jaymap-default-avatar.svg";
+                }}
                 className="h-full w-full object-cover"
               />
             ) : (
-              <span className="text-[24px] font-semibold">
-                {displayName
-                  .slice(0, 1)
-                  .toUpperCase()}
-              </span>
+              <img
+                src="/jaymap-default-avatar.svg"
+                alt="JayMap"
+                className="h-full w-full object-cover"
+              />
             )}
 
             <span className="absolute inset-0 flex items-center justify-center bg-black/40 text-white opacity-0 transition group-hover:opacity-100">

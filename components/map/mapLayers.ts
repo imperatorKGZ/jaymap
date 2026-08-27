@@ -254,11 +254,34 @@ export async function setupMapLayers(map: maplibregl.Map, language: Language = "
         ["!=", ["get", "name:ru"], "Бишкек"]
       ],
        layout: {
-        "text-anchor": "left",
-        "text-offset": [0.8, 0],
-        "text-field": cityNameExpression(language),
+        "text-field":
+          cityNameExpression(
+            language
+          ),
 
-        "text-font": ["Noto Sans Regular"],
+        "text-font": [
+          "Noto Sans Regular"
+        ],
+
+        /*
+        * Подпись может искать свободное
+        * положение вокруг своей точки.
+        */
+        "text-variable-anchor": [
+          "left",
+          "right",
+          "top",
+          "bottom",
+        ],
+
+        /*
+        * Небольшой зазор от точки города.
+        */
+        "text-radial-offset":
+          0.45,
+
+        "text-justify":
+          "auto",
 
         "text-size": [
           "interpolate",
@@ -269,10 +292,21 @@ export async function setupMapLayers(map: maplibregl.Map, language: Language = "
           12, 23
         ],
 
-        "text-letter-spacing": 0.02,
+        "text-letter-spacing":
+          0.02,
 
-        "text-allow-overlap": false,
-        "text-ignore-placement": false
+        /*
+        * Теперь подпись реально участвует
+        * в collision detection.
+        */
+        "text-allow-overlap":
+          false,
+
+        "text-ignore-placement":
+          false,
+
+        "text-padding":
+          6,
       },
     
       paint: {

@@ -397,12 +397,26 @@ export default function Navbar({
     )[0] ||
     "Профиль";
 
+  /*
+   * Пользовательская фотография берётся только
+   * из profile.avatar_url.
+   *
+   * Если её нет — ниже автоматически используется
+   * стандартный JayMap avatar.
+   */
   const userAvatar =
-    profile?.avatar_url ||
-    user?.user_metadata?.avatar_url ||
-    user?.user_metadata?.picture ||
+    profile?.avatar_url?.trim() ||
     null;
-
+  console.log(
+    "[Navbar avatar]",
+    {
+      userAvatar,
+      profileAvatar:
+        profile?.avatar_url,
+      userId:
+        user?.id,
+    }
+  );
   /*
    * =========================================================
    * RENDER
@@ -745,6 +759,15 @@ export default function Navbar({
                       userAvatar
                     }
                     alt=""
+                    onError={(
+                      event
+                    ) => {
+                      event.currentTarget.onerror =
+                        null;
+
+                      event.currentTarget.src =
+                        "/jaymap-default-avatar.svg";
+                    }}
                     className="
                       block
                       h-7
@@ -754,28 +777,17 @@ export default function Navbar({
                     "
                   />
                 ) : (
-                  <div
+                  <img
+                    src="/jaymap-default-avatar.svg"
+                    alt="JayMap"
                     className="
-                      flex
+                      block
                       h-7
                       w-7
-                      items-center
-                      justify-center
                       rounded-full
-                      bg-[#6FC9C2]
-                      text-[11px]
-                      font-bold
-                      leading-none
-                      text-[#0a0f14]
+                      object-cover
                     "
-                  >
-                    {userName
-                      .slice(
-                        0,
-                        1
-                      )
-                      .toUpperCase()}
-                  </div>
+                  />
                 )}
 
                 <span
