@@ -81,6 +81,10 @@ import type {
   ListingHistoryItem,
 } from "@/lib/supabase/api";
 
+import {
+  useResponsiveUIScale,
+} from "@/components/layout/useResponsiveUIScale";
+
 import "./theme.css";
 
 export type SidebarTheme =
@@ -129,6 +133,12 @@ const CONTENT_WIDTH =
   PANEL_WIDTH -
   RAIL_WIDTH;
 
+const SIDEBAR_TOP = 20;
+
+const SIDEBAR_LEFT = 20;
+
+const SIDEBAR_BOTTOM = 230;
+
 export default function Sidebar({
   theme = "dark",
 
@@ -141,6 +151,9 @@ export default function Sidebar({
   const {
     t,
   } = useTranslation();
+
+  const uiScale =
+    useResponsiveUIScale();
 
   const state =
     useSidebarState(
@@ -282,13 +295,6 @@ export default function Sidebar({
         if (
           !result.valid
         ) {
-          /**
-           * Пока не меняем систему i18n.
-           * Просто показываем локальный browser-safe state.
-           *
-           * На следующем этапе сделаем полноценный
-           * inline validation message с переводами.
-           */
           setValidationError(
             true
           );
@@ -462,6 +468,67 @@ export default function Sidebar({
       ? PANEL_WIDTH
       : RAIL_WIDTH;
 
+  /**
+   * =========================================================
+   * RESPONSIVE GEOMETRY
+   * =========================================================
+   *
+   * Мы масштабируем ВЕСЬ существующий Sidebar.
+   *
+   * При этом физические границы сохраняются:
+   *
+   * top    = 20px
+   * left   = 20px
+   * bottom = 230px
+   *
+   * Поэтому используем обратное масштабирование
+   * CSS-размеров до transform.
+   *
+   * Пример при scale = 0.8:
+   *
+   * logical top:
+   *   20 / 0.8 = 25
+   *
+   * после scale:
+   *   25 × 0.8 = 20px
+   *
+   * Высота рассчитывается таким же образом.
+   */
+  const sidebarLogicalTop =
+    SIDEBAR_TOP /
+    uiScale;
+
+  const sidebarLogicalLeft =
+    SIDEBAR_LEFT /
+    uiScale;
+
+  const sidebarPhysicalHeight =
+    `calc(100vh - ${
+      SIDEBAR_TOP +
+      SIDEBAR_BOTTOM
+    }px)`;
+
+  const sidebarLogicalHeight =
+    `calc(${sidebarPhysicalHeight} / ${uiScale})`;
+
+  /**
+   * В мобильном закрытом состоянии раньше
+   * Sidebar скрывался через Tailwind transform.
+   *
+   * Здесь этот transform собираем вручную,
+   * чтобы одновременно сохранить:
+   *
+   * translateX
+   * +
+   * scale
+   */
+  const sidebarTransform =
+    breakpoint ===
+      "mobile" &&
+    !mobileOpen
+      ? `translateX(calc(-100% - 40px)) scale(${uiScale})`
+      : `translateX(0) scale(${uiScale})`;
+
   return (
     <div
       data-sidebar-theme={
@@ -486,20 +553,26 @@ export default function Sidebar({
           width:
             panelWidth,
 
+          height:
+            sidebarLogicalHeight,
+
           position:
             "fixed",
 
           top:
-            "20px",
+            `${sidebarLogicalTop}px`,
 
           left:
-            "20px",
-
-          bottom:
-            "230px",
+            `${sidebarLogicalLeft}px`,
 
           zIndex:
             50,
+
+          transform:
+            sidebarTransform,
+
+          transformOrigin:
+            "top left",
         }}
         className={[
           "rounded-[var(--sb-radius-panel)]",
@@ -508,12 +581,6 @@ export default function Sidebar({
           "shadow-[var(--sb-shadow)]",
           "backdrop-blur-[var(--sb-blur)]",
           "flex overflow-hidden",
-
-          breakpoint ===
-            "mobile" &&
-          !mobileOpen
-            ? "-translate-x-[calc(100%+40px)]"
-            : "translate-x-0",
 
           "transition-transform duration-[220ms] ease-out",
         ].join(" ")}
@@ -581,7 +648,9 @@ export default function Sidebar({
                     ? ChevronLeftIcon
                     : MenuRailIcon
                 }
-                size={20}
+                size={
+                  20
+                }
               />
             </button>
 
@@ -633,7 +702,9 @@ export default function Sidebar({
             expanded
               ? "translate-x-0 opacity-100"
               : "pointer-events-none translate-x-[-24px] opacity-0",
-          ].join(" ")}
+          ].join(
+            " "
+          )}
         >
           {validationError && (
             <div
@@ -654,7 +725,9 @@ export default function Sidebar({
                 "font-medium",
                 "text-red-700",
                 "shadow-lg",
-              ].join(" ")}
+              ].join(
+                " "
+              )}
             >
               Проверьте значения
               фильтров.

@@ -15,7 +15,8 @@ interface ProfileEditModalProps {
   onClose: () => void;
 }
 
-const MAX_AVATAR_SIZE = 5 * 1024 * 1024;
+const MAX_AVATAR_SIZE =
+  5 * 1024 * 1024;
 
 const ALLOWED_TYPES = [
   "image/jpeg",
@@ -66,10 +67,12 @@ export default function ProfileEditModal({
     saving,
     setSaving,
   ] = useState(false);
+
   const [
     deletingAvatar,
     setDeletingAvatar,
   ] = useState(false);
+
   const [
     error,
     setError,
@@ -105,7 +108,9 @@ export default function ProfileEditModal({
     );
 
     setSelectedFile(null);
+
     setError(null);
+
     setSuccess(false);
   }, [
     open,
@@ -171,10 +176,181 @@ export default function ProfileEditModal({
       );
     };
 
+  /*
+   * Отмена нового выбранного файла,
+   * который ещё не сохранён.
+   */
   const removeCurrentAvatar =
-    async () => {
+    () => {
       setAvatarPreview(null);
+
       setSelectedFile(null);
+
+      if (
+        fileInputRef.current
+      ) {
+        fileInputRef.current.value =
+          "";
+      }
+    };
+
+  /*
+   * Полное удаление уже сохранённого
+   * пользовательского аватара.
+   *
+   * 1. Удаляем физический файл
+   *    из Supabase Storage.
+   *
+   * 2. Если удаление успешно —
+   *    очищаем profiles.avatar_url.
+   *
+   * 3. Обновляем локальный profile.
+   */
+  const handleDeleteAvatar =
+    async () => {
+      if (
+        !user ||
+        !profile?.avatar_url ||
+        deletingAvatar
+      ) {
+        return;
+      }
+
+      setDeletingAvatar(
+        true
+      );
+
+      setError(null);
+
+      setSuccess(false);
+
+      const currentAvatarUrl =
+        profile.avatar_url;
+
+      try {
+        /*
+         * Public URL имеет вид:
+         *
+         * .../storage/v1/object/public/avatars/USER_ID/file.jpg
+         *
+         * Нам нужен:
+         *
+         * USER_ID/file.jpg
+         */
+        const marker =
+          "/storage/v1/object/public/avatars/";
+
+        const markerIndex =
+          currentAvatarUrl.indexOf(
+            marker
+          );
+
+        if (
+          markerIndex === -1
+        ) {
+          throw new Error(
+            "Не удалось определить путь аватара в Storage."
+          );
+        }
+
+        const storagePath =
+          currentAvatarUrl.slice(
+            markerIndex +
+              marker.length
+          );
+
+        const {
+          supabase,
+        } =
+          await import(
+            "@/lib/supabase/client"
+          );
+
+        /*
+         * Удаляем физический объект.
+         */
+        const {
+          error:
+            storageError,
+        } =
+          await supabase.storage
+            .from("avatars")
+            .remove([
+              storagePath,
+            ]);
+
+        if (
+          storageError
+        ) {
+          throw storageError;
+        }
+
+        /*
+         * Только после успешного удаления
+         * очищаем ссылку в профиле.
+         */
+        const {
+          error:
+            updateError,
+        } =
+          await supabase
+            .from("profiles")
+            .update({
+              avatar_url:
+                null,
+
+              updated_at:
+                new Date().toISOString(),
+            })
+            .eq(
+              "id",
+              user.id
+            );
+
+        if (
+          updateError
+        ) {
+          throw updateError;
+        }
+
+        /*
+         * Сбрасываем локальное состояние.
+         */
+        setAvatarPreview(
+          null
+        );
+
+        setSelectedFile(
+          null
+        );
+
+        if (
+          fileInputRef.current
+        ) {
+          fileInputRef.current.value =
+            "";
+        }
+
+        /*
+         * Синхронизируем AuthProvider.
+         */
+        await refreshProfile();
+      } catch (
+        err
+      ) {
+        console.error(
+          "[ProfileEditModal] Delete avatar failed:",
+          err
+        );
+
+        setError(
+          "Не удалось удалить фото. Попробуйте ещё раз."
+        );
+      } finally {
+        setDeletingAvatar(
+          false
+        );
+      }
     };
 
   const handleSave =
@@ -191,8 +367,7 @@ export default function ProfileEditModal({
       }
 
       if (
-        trimmedName.length <
-        2
+        trimmedName.length < 2
       ) {
         setError(
           "Имя должно содержать минимум 2 символа."
@@ -202,8 +377,7 @@ export default function ProfileEditModal({
       }
 
       if (
-        trimmedName.length >
-        80
+        trimmedName.length > 80
       ) {
         setError(
           "Имя слишком длинное."
@@ -213,7 +387,9 @@ export default function ProfileEditModal({
       }
 
       setSaving(true);
+
       setError(null);
+
       setSuccess(false);
 
       let uploadedAvatarUrl =
@@ -248,7 +424,10 @@ export default function ProfileEditModal({
                 {
                   cacheControl:
                     "3600",
-                  upsert: false,
+
+                  upsert:
+                    false,
+
                   contentType:
                     selectedFile.type,
                 }
@@ -292,13 +471,17 @@ export default function ProfileEditModal({
             .update({
               display_name:
                 trimmedName,
+
               avatar_url:
                 uploadedAvatarUrl,
+
               contact_phone:
                 contactPhone.trim() ||
                 null,
+
               onboarding_completed:
                 true,
+
               updated_at:
                 new Date().toISOString(),
             })
@@ -307,7 +490,9 @@ export default function ProfileEditModal({
               user.id
             );
 
-        if (updateError) {
+        if (
+          updateError
+        ) {
           throw updateError;
         }
 
@@ -318,7 +503,9 @@ export default function ProfileEditModal({
         setTimeout(() => {
           onClose();
         }, 500);
-      } catch (err) {
+      } catch (
+        err
+      ) {
         console.error(
           "[ProfileEditModal] Save failed:",
           err
@@ -338,29 +525,52 @@ export default function ProfileEditModal({
       aria-modal="true"
       aria-labelledby="profile-edit-title"
       style={{
-        position: "fixed",
+        position:
+          "fixed",
+
         inset: 0,
+
         zIndex: 1100,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "24px",
+
+        display:
+          "flex",
+
+        alignItems:
+          "center",
+
+        justifyContent:
+          "center",
+
+        padding:
+          "24px",
       }}
     >
       <button
         type="button"
-        onClick={onClose}
+        onClick={
+          onClose
+        }
         aria-label="Закрыть"
         style={{
-          position: "absolute",
+          position:
+            "absolute",
+
           inset: 0,
-          width: "100%",
-          height: "100%",
+
+          width:
+            "100%",
+
+          height:
+            "100%",
+
           border: 0,
+
           background:
             "rgba(8,12,16,0.62)",
+
           backdropFilter:
             "blur(14px)",
+
           WebkitBackdropFilter:
             "blur(14px)",
         }}
@@ -368,38 +578,59 @@ export default function ProfileEditModal({
 
       <div
         style={{
-          position: "relative",
-          width: "100%",
-          maxWidth: "460px",
+          position:
+            "relative",
+
+          width:
+            "100%",
+
+          maxWidth:
+            "460px",
+
           maxHeight:
             "calc(100vh - 48px)",
-          overflowY: "auto",
+
+          overflowY:
+            "auto",
+
           border:
             "1px solid rgba(255,255,255,0.12)",
-          borderRadius: "24px",
+
+          borderRadius:
+            "24px",
+
           background:
             "linear-gradient(180deg, rgba(29,36,46,0.98) 0%, rgba(17,23,31,0.98) 100%)",
+
           boxShadow:
             "0 30px 90px rgba(0,0,0,0.45)",
-          color: "#fff",
+
+          color:
+            "#fff",
         }}
       >
         <div
           style={{
             padding:
               "26px 28px 20px",
+
             borderBottom:
               "1px solid rgba(255,255,255,0.08)",
           }}
         >
           <div
             style={{
-              display: "flex",
+              display:
+                "flex",
+
               justifyContent:
                 "space-between",
+
               alignItems:
                 "center",
-              gap: "12px",
+
+              gap:
+                "12px",
             }}
           >
             <div>
@@ -407,9 +638,12 @@ export default function ProfileEditModal({
                 id="profile-edit-title"
                 style={{
                   margin: 0,
+
                   fontSize:
                     "22px",
-                  fontWeight: 700,
+
+                  fontWeight:
+                    700,
                 }}
               >
                 Профиль
@@ -419,8 +653,10 @@ export default function ProfileEditModal({
                 style={{
                   margin:
                     "8px 0 0",
+
                   fontSize:
                     "12px",
+
                   color:
                     "rgba(255,255,255,0.45)",
                 }}
@@ -432,20 +668,31 @@ export default function ProfileEditModal({
 
             <button
               type="button"
-              onClick={onClose}
+              onClick={
+                onClose
+              }
               style={{
-                width: "36px",
-                height: "36px",
+                width:
+                  "36px",
+
+                height:
+                  "36px",
+
                 borderRadius:
                   "50%",
+
                 border:
                   "1px solid rgba(255,255,255,0.08)",
+
                 background:
                   "rgba(255,255,255,0.05)",
+
                 color:
                   "rgba(255,255,255,0.65)",
+
                 fontSize:
                   "22px",
+
                 cursor:
                   "pointer",
               }}
@@ -464,9 +711,12 @@ export default function ProfileEditModal({
           {/* Avatar */}
           <div
             style={{
-              display: "flex",
+              display:
+                "flex",
+
               flexDirection:
                 "column",
+
               alignItems:
                 "center",
             }}
@@ -479,30 +729,45 @@ export default function ProfileEditModal({
               style={{
                 position:
                   "relative",
-                width: "96px",
-                height: "96px",
+
+                width:
+                  "96px",
+
+                height:
+                  "96px",
+
                 overflow:
                   "hidden",
+
                 borderRadius:
                   "50%",
+
                 border:
                   "1px solid rgba(255,255,255,0.12)",
+
                 background:
                   "rgba(255,255,255,0.06)",
+
                 cursor:
                   "pointer",
-                padding: 0,
+
+                padding:
+                  0,
               }}
             >
               {avatarPreview ? (
                 <img
-                  src={avatarPreview}
+                  src={
+                    avatarPreview
+                  }
                   alt=""
                   style={{
                     width:
                       "100%",
+
                     height:
                       "100%",
+
                     objectFit:
                       "cover",
                   }}
@@ -514,8 +779,10 @@ export default function ProfileEditModal({
                   style={{
                     width:
                       "100%",
+
                     height:
                       "100%",
+
                     objectFit:
                       "cover",
                   }}
@@ -526,26 +793,37 @@ export default function ProfileEditModal({
                 style={{
                   position:
                     "absolute",
+
                   right:
                     "5px",
+
                   bottom:
                     "5px",
+
                   width:
                     "28px",
+
                   height:
                     "28px",
+
                   display:
                     "flex",
+
                   alignItems:
                     "center",
+
                   justifyContent:
                     "center",
+
                   borderRadius:
                     "50%",
+
                   background:
                     "#10a37f",
+
                   border:
                     "2px solid #17202a",
+
                   fontSize:
                     "14px",
                 }}
@@ -573,8 +851,10 @@ export default function ProfileEditModal({
               style={{
                 marginTop:
                   "10px",
+
                 fontSize:
                   "11px",
+
                 color:
                   "rgba(255,255,255,0.38)",
               }}
@@ -592,18 +872,69 @@ export default function ProfileEditModal({
                   style={{
                     marginTop:
                       "7px",
-                    border: 0,
+
+                    border:
+                      0,
+
                     background:
                       "transparent",
+
                     color:
                       "#ff8f8f",
+
                     fontSize:
                       "11px",
+
                     cursor:
                       "pointer",
                   }}
                 >
                   Убрать выбранное фото
+                </button>
+              )}
+
+            {profile?.avatar_url &&
+              !selectedFile && (
+                <button
+                  type="button"
+                  onClick={
+                    handleDeleteAvatar
+                  }
+                  disabled={
+                    deletingAvatar
+                  }
+                  style={{
+                    marginTop:
+                      "7px",
+
+                    border:
+                      0,
+
+                    background:
+                      "transparent",
+
+                    color:
+                      deletingAvatar
+                        ? "rgba(255,143,143,0.45)"
+                        : "#ff8f8f",
+
+                    fontSize:
+                      "11px",
+
+                    cursor:
+                      deletingAvatar
+                        ? "default"
+                        : "pointer",
+
+                    opacity:
+                      deletingAvatar
+                        ? 0.7
+                        : 1,
+                  }}
+                >
+                  {deletingAvatar
+                    ? "Удаляем..."
+                    : "Удалить фото"}
                 </button>
               )}
           </div>
@@ -613,6 +944,7 @@ export default function ProfileEditModal({
             style={{
               display:
                 "block",
+
               marginTop:
                 "24px",
             }}
@@ -621,12 +953,16 @@ export default function ProfileEditModal({
               style={{
                 display:
                   "block",
+
                 marginBottom:
                   "8px",
+
                 fontSize:
                   "12px",
+
                 fontWeight:
                   600,
+
                 color:
                   "rgba(255,255,255,0.62)",
               }}
@@ -635,7 +971,9 @@ export default function ProfileEditModal({
             </span>
 
             <input
-              value={name}
+              value={
+                name
+              }
               onChange={(
                 event
               ) =>
@@ -648,20 +986,28 @@ export default function ProfileEditModal({
               style={{
                 width:
                   "100%",
+
                 height:
                   "48px",
+
                 padding:
                   "0 15px",
+
                 border:
                   "1px solid rgba(255,255,255,0.1)",
+
                 borderRadius:
                   "12px",
+
                 background:
                   "rgba(255,255,255,0.04)",
+
                 color:
                   "#fff",
+
                 outline:
                   "none",
+
                 fontSize:
                   "14px",
               }}
@@ -673,6 +1019,7 @@ export default function ProfileEditModal({
             style={{
               display:
                 "block",
+
               marginTop:
                 "16px",
             }}
@@ -681,12 +1028,16 @@ export default function ProfileEditModal({
               style={{
                 display:
                   "block",
+
                 marginBottom:
                   "8px",
+
                 fontSize:
                   "12px",
+
                 fontWeight:
                   600,
+
                 color:
                   "rgba(255,255,255,0.62)",
               }}
@@ -703,20 +1054,28 @@ export default function ProfileEditModal({
               style={{
                 width:
                   "100%",
+
                 height:
                   "48px",
+
                 padding:
                   "0 15px",
+
                 border:
                   "1px solid rgba(255,255,255,0.06)",
+
                 borderRadius:
                   "12px",
+
                 background:
                   "rgba(255,255,255,0.025)",
+
                 color:
                   "rgba(255,255,255,0.45)",
+
                 outline:
                   "none",
+
                 fontSize:
                   "14px",
               }}
@@ -728,6 +1087,7 @@ export default function ProfileEditModal({
             style={{
               display:
                 "block",
+
               marginTop:
                 "16px",
             }}
@@ -736,12 +1096,16 @@ export default function ProfileEditModal({
               style={{
                 display:
                   "block",
+
                 marginBottom:
                   "8px",
+
                 fontSize:
                   "12px",
+
                 fontWeight:
                   600,
+
                 color:
                   "rgba(255,255,255,0.62)",
               }}
@@ -757,8 +1121,7 @@ export default function ProfileEditModal({
                 event
               ) =>
                 setContactPhone(
-                  event.target
-                    .value
+                  event.target.value
                 )
               }
               placeholder="+996 ..."
@@ -766,20 +1129,28 @@ export default function ProfileEditModal({
               style={{
                 width:
                   "100%",
+
                 height:
                   "48px",
+
                 padding:
                   "0 15px",
+
                 border:
                   "1px solid rgba(255,255,255,0.1)",
+
                 borderRadius:
                   "12px",
+
                 background:
                   "rgba(255,255,255,0.04)",
+
                 color:
                   "#fff",
+
                 outline:
                   "none",
+
                 fontSize:
                   "14px",
               }}
@@ -791,16 +1162,22 @@ export default function ProfileEditModal({
               style={{
                 marginTop:
                   "16px",
+
                 padding:
                   "11px 12px",
+
                 border:
                   "1px solid rgba(255,90,90,0.2)",
+
                 borderRadius:
                   "10px",
+
                 background:
                   "rgba(255,90,90,0.08)",
+
                 color:
                   "#ff9d9d",
+
                 fontSize:
                   "12px",
               }}
@@ -814,16 +1191,22 @@ export default function ProfileEditModal({
               style={{
                 marginTop:
                   "16px",
+
                 padding:
                   "11px 12px",
+
                 border:
                   "1px solid rgba(80,220,150,0.18)",
+
                 borderRadius:
                   "10px",
+
                 background:
                   "rgba(80,220,150,0.08)",
+
                 color:
                   "#93e6ba",
+
                 fontSize:
                   "12px",
               }}
@@ -836,31 +1219,53 @@ export default function ProfileEditModal({
             style={{
               display:
                 "flex",
-              gap: "10px",
+
+              gap:
+                "10px",
+
               marginTop:
                 "22px",
             }}
           >
             <button
               type="button"
-              onClick={onClose}
-              disabled={saving}
+              onClick={
+                onClose
+              }
+              disabled={
+                saving ||
+                deletingAvatar
+              }
               style={{
-                flex: 1,
+                flex:
+                  1,
+
                 height:
                   "46px",
+
                 border:
                   "1px solid rgba(255,255,255,0.09)",
+
                 borderRadius:
                   "12px",
+
                 background:
                   "rgba(255,255,255,0.04)",
+
                 color:
                   "rgba(255,255,255,0.65)",
+
                 cursor:
-                  saving
+                  saving ||
+                  deletingAvatar
                     ? "not-allowed"
                     : "pointer",
+
+                opacity:
+                  saving ||
+                  deletingAvatar
+                    ? 0.6
+                    : 1,
               }}
             >
               Отмена
@@ -871,26 +1276,41 @@ export default function ProfileEditModal({
               onClick={
                 handleSave
               }
-              disabled={saving}
+              disabled={
+                saving ||
+                deletingAvatar
+              }
               style={{
-                flex: 1,
+                flex:
+                  1,
+
                 height:
                   "46px",
-                border: 0,
+
+                border:
+                  0,
+
                 borderRadius:
                   "12px",
+
                 background:
                   "#10a37f",
+
                 color:
                   "#fff",
+
                 fontWeight:
                   600,
+
                 cursor:
-                  saving
+                  saving ||
+                  deletingAvatar
                     ? "not-allowed"
                     : "pointer",
+
                 opacity:
-                  saving
+                  saving ||
+                  deletingAvatar
                     ? 0.65
                     : 1,
               }}

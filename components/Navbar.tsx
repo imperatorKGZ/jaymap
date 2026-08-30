@@ -22,6 +22,10 @@ import CityDropdown from "./CityDropdown";
 import AuthModal from "./auth/AuthModal";
 import ListingCreateModal from "./listings/ListingCreateModal";
 
+import {
+  useResponsiveUIScale,
+} from "@/components/layout/useResponsiveUIScale";
+
 import "./navbar.css";
 
 interface NavbarProps {
@@ -41,6 +45,23 @@ export default function Navbar({
 }: NavbarProps) {
   /*
    * =========================================================
+   * RESPONSIVE UI SCALE
+   * =========================================================
+   *
+   * ВАЖНО:
+   *
+   * Масштабируется только визуальная композиция Navbar.
+   *
+   * Внутренние координаты ниже НЕ меняются.
+   *
+   * Карта, Sidebar и остальная логика приложения
+   * этим хуком не затрагиваются.
+   */
+  const uiScale =
+    useResponsiveUIScale();
+
+  /*
+   * =========================================================
    * NAVBAR GEOMETRY
    * =========================================================
    *
@@ -49,7 +70,6 @@ export default function Navbar({
    * Меняешь один параметр —
    * двигается только соответствующий элемент.
    */
-
   const NAVBAR_TOP = 20;
   const NAVBAR_HEIGHT = 68;
   const NAVBAR_WIDTH = 1000;
@@ -407,16 +427,20 @@ export default function Navbar({
   const userAvatar =
     profile?.avatar_url?.trim() ||
     null;
+
   console.log(
     "[Navbar avatar]",
     {
       userAvatar,
+
       profileAvatar:
         profile?.avatar_url,
+
       userId:
         user?.id,
     }
   );
+
   /*
    * =========================================================
    * RENDER
@@ -431,18 +455,22 @@ export default function Navbar({
           fixed
           left-1/2
           z-50
-          w-[calc(100%-40px)]
-          max-w-[1000px]
         "
         style={{
           top:
-            `${NAVBAR_TOP}px`,
+            `${NAVBAR_TOP * uiScale}px`,
+
+          width:
+            `${NAVBAR_WIDTH}px`,
 
           height:
             `${NAVBAR_HEIGHT}px`,
 
           transform:
-            "translateX(-50%)",
+            `translateX(-50%) scale(${uiScale})`,
+
+          transformOrigin:
+            "top center",
         }}
       >
         <div

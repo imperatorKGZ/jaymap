@@ -98,6 +98,169 @@ const FAVORITE_FLY_TO_DURATION =
 const DEBOUNCE_MS =
   300;
 
+/* ============================================================
+   RESPONSIVE COUNTRY VIEW
+   ============================================================ */
+
+/**
+ * Твой эталон.
+ *
+ * ВАЖНО:
+ *
+ * Это НЕ ограничение размера экрана.
+ * Это только точка, относительно которой
+ * рассчитывается desktop responsive camera.
+ */
+const BASELINE_WIDTH =
+  1920;
+
+const BASELINE_HEIGHT =
+  912;
+
+/**
+ * Исходный country view.
+ *
+ * Эти значения сохраняем.
+ */
+const COUNTRY_CENTER:
+  [number, number] = [
+  74.95,
+  41.45,
+];
+
+const COUNTRY_BASE_ZOOM =
+  6.7;
+
+/**
+ * Максимально допустимый zoom-out
+ * только для очень маленьких viewport.
+ *
+ * В нормальных desktop размерах
+ * карта останется значительно ближе
+ * к твоему 6.7.
+ */
+const MAX_RESPONSIVE_ZOOM_OUT =
+  0.7;
+
+const RESPONSIVE_MIN_ZOOM =
+  COUNTRY_BASE_ZOOM -
+  MAX_RESPONSIVE_ZOOM_OUT;
+
+/**
+ * После остановки resize
+ * ждём совсем немного и только один раз
+ * корректируем camera.
+ *
+ * Это убирает дёрганье во время drag-resize.
+ */
+const RESPONSIVE_RESIZE_DEBOUNCE =
+  180;
+
+/**
+ * Если изменение zoom меньше этого значения,
+ * camera не трогаем.
+ */
+const RESPONSIVE_ZOOM_EPSILON =
+  0.01;
+
+/**
+ * Рассчитывает scale относительно
+ * твоего baseline 1920×912.
+ *
+ * ВАЖНО:
+ *
+ * - больше baseline → scale 1;
+ * - меньше baseline → scale < 1;
+ * - карта на больших экранах НИКОГДА
+ *   не становится меньше из-за этой функции.
+ */
+function getResponsiveScale():
+  number {
+  if (
+    typeof window ===
+    "undefined"
+  ) {
+    return 1;
+  }
+
+  const width =
+    window.innerWidth;
+
+  const height =
+    window.innerHeight;
+
+  if (
+    width <= 0 ||
+    height <= 0
+  ) {
+    return 1;
+  }
+
+  return Math.min(
+    1,
+    width /
+      BASELINE_WIDTH,
+    height /
+      BASELINE_HEIGHT
+  );
+}
+
+/**
+ * Переводит responsive scale
+ * в MapLibre zoom.
+ *
+ * MapLibre использует logarithmic zoom,
+ * поэтому log2 даёт естественное изменение
+ * масштаба.
+ *
+ * baseline:
+ *
+ * scale 1
+ * ↓
+ * zoom 6.7
+ *
+ * меньше viewport:
+ *
+ * scale < 1
+ * ↓
+ * zoom слегка уменьшается
+ */
+function getResponsiveCountryZoom():
+  number {
+  const scale =
+    getResponsiveScale();
+
+  if (
+    scale >= 1
+  ) {
+    return COUNTRY_BASE_ZOOM;
+  }
+
+  const deltaZoom =
+    Math.log2(
+      scale
+    );
+
+  const limitedDelta =
+    Math.max(
+      -MAX_RESPONSIVE_ZOOM_OUT,
+      Math.min(
+        0,
+        deltaZoom
+      )
+    );
+
+  return Math.max(
+    RESPONSIVE_MIN_ZOOM,
+    COUNTRY_BASE_ZOOM +
+      limitedDelta
+  );
+}
+
+/* ============================================================
+   COMPONENT
+   ============================================================ */
+
 export default function MainMap({
   selectedCity = null,
   filters,
@@ -132,6 +295,16 @@ export default function MainMap({
     >(null);
 
   /**
+   * Таймер responsive resize.
+   */
+  const responsiveResizeTimerRef =
+    useRef<
+      ReturnType<
+        typeof setTimeout
+      > | null
+    >(null);
+
+  /**
    * Карта готова к загрузке данных.
    */
   const isReadyRef =
@@ -139,17 +312,32 @@ export default function MainMap({
 
   /**
    * Защита от race condition.
-   *
-   * Если:
-   *
-   * request 1
-   * request 2
-   *
-   * и request 1 завершится позже request 2,
-   * его результат игнорируется.
    */
   const requestIdRef =
     useRef(0);
+
+  /**
+   * Responsive camera работает
+   * только для country view.
+   *
+   * После выбора города/объявления
+   * отключается.
+   */
+  const responsiveCountryViewRef =
+    useRef(true);
+
+  /**
+   * Флаг:
+   *
+   * следующий zoom был вызван нами
+   * во время responsive resize.
+   *
+   * Нужен, чтобы существующий zoomend
+   * не принял наш resize за действие
+   * пользователя.
+   */
+  const responsiveCameraChangeRef =
+    useRef(false);
 
   const [
     isLoaded,
@@ -167,8 +355,7 @@ export default function MainMap({
    * Текущий язык хранится в ref.
    *
    * MapLibre и его listeners создаются
-   * один раз, поэтому не нужно пересоздавать
-   * карту при смене языка.
+   * один раз.
    */
   const languageRef =
     useRef(language);
@@ -196,9 +383,11 @@ export default function MainMap({
         style:
           "/map/styles/light.json",
 
-        pitch: 0,
+        pitch:
+          0,
 
-        bearing: 0,
+        bearing:
+          0,
 
         minZoom:
           MAP_CONFIG.minZoom,
@@ -407,16 +596,39 @@ export default function MainMap({
         );
 
         /**
-         * Initial camera position.
+         * -----------------------------------------------------
+         * INITIAL CAMERA
+         * -----------------------------------------------------
+         *
+         * На 1920×912:
+         *
+         * center = [74.95, 41.45]
+         * zoom = 6.7
+         *
+         * На меньшем viewport
+         * допускается только responsive zoom-out.
          */
+        const initialZoom =
+          getResponsiveCountryZoom();
+
+        /**
+         * Временно разрешаем карте
+         * отдалиться ниже исходного minZoom,
+         * если viewport этого требует.
+         */
+        map.setMinZoom(
+          Math.min(
+            MAP_CONFIG.minZoom,
+            initialZoom
+          )
+        );
+
         map.jumpTo({
-          center: [
-            74.95,
-            41.45,
-          ],
+          center:
+            COUNTRY_CENTER,
 
           zoom:
-            6.7,
+            initialZoom,
         });
 
         /**
@@ -425,22 +637,50 @@ export default function MainMap({
          */
         map.dragPan.disable();
 
+        /**
+         * Существующая логика управления pan
+         * остаётся.
+         */
         map.on(
           "zoomend",
           () => {
+            /**
+             * Если это был именно наш
+             * responsive resize — не считаем
+             * его пользовательским zoom.
+             */
+            if (
+              responsiveCameraChangeRef.current
+            ) {
+              responsiveCameraChangeRef.current =
+                false;
+
+              return;
+            }
+
             if (
               map.getZoom() >
               6.8
             ) {
+              /**
+               * Пользователь увеличил карту.
+               */
+              responsiveCountryViewRef.current =
+                false;
+
               map.dragPan.enable();
             } else {
+              /**
+               * Возврат к country view.
+               */
               map.dragPan.disable();
 
+              responsiveCountryViewRef.current =
+                true;
+
               map.easeTo({
-                center: [
-                  74.95,
-                  41.45,
-                ],
+                center:
+                  COUNTRY_CENTER,
 
                 duration:
                   200,
@@ -484,6 +724,17 @@ export default function MainMap({
           null;
       }
 
+      if (
+        responsiveResizeTimerRef.current
+      ) {
+        clearTimeout(
+          responsiveResizeTimerRef.current
+        );
+
+        responsiveResizeTimerRef.current =
+          null;
+      }
+
       clusterHandleRef.current?.destroy();
 
       clusterHandleRef.current =
@@ -496,6 +747,162 @@ export default function MainMap({
     };
   }, [
     onListingSelect,
+  ]);
+
+  /* =========================================================
+     RESPONSIVE MAP RESIZE
+     ========================================================= */
+
+  useEffect(() => {
+    const map =
+      mapRef.current;
+
+    const container =
+      mapContainer.current;
+
+    if (
+      !map ||
+      !container ||
+      !isLoaded
+    ) {
+      return;
+    }
+
+    const handleResize =
+      () => {
+        /**
+         * -----------------------------------------------------
+         * Главное отличие:
+         *
+         * во время drag-resize мы НЕ трогаем camera.
+         *
+         * Только ждём окончания resize.
+         * -----------------------------------------------------
+         */
+
+        if (
+          responsiveResizeTimerRef.current
+        ) {
+          clearTimeout(
+            responsiveResizeTimerRef.current
+          );
+        }
+
+        responsiveResizeTimerRef.current =
+          setTimeout(
+            () => {
+              responsiveResizeTimerRef.current =
+                null;
+
+              /**
+               * MapLibre получает актуальный
+               * размер контейнера.
+               */
+              map.resize();
+
+              /**
+               * Если карта уже не находится
+               * в исходном country view —
+               * пользователя не трогаем.
+               */
+              if (
+                !responsiveCountryViewRef.current
+              ) {
+                return;
+              }
+
+              /**
+               * Новый responsive zoom.
+               */
+              const nextZoom =
+                getResponsiveCountryZoom();
+
+              const currentZoom =
+                map.getZoom();
+
+              /**
+               * Ничего не делаем,
+               * если zoom практически тот же.
+               */
+              if (
+                Math.abs(
+                  currentZoom -
+                    nextZoom
+                ) <
+                RESPONSIVE_ZOOM_EPSILON
+              ) {
+                return;
+              }
+
+              /**
+               * Разрешаем responsive camera
+               * временно опуститься ниже
+               * стандартного minZoom.
+               */
+              map.setMinZoom(
+                Math.min(
+                  MAP_CONFIG.minZoom,
+                  nextZoom
+                )
+              );
+
+              /**
+               * Ставим флаг до zoomend,
+               * чтобы существующая логика
+               * zoomend не считала это
+               * пользовательским zoom.
+               */
+              responsiveCameraChangeRef.current =
+                true;
+
+              /**
+               * Только zoom.
+               *
+               * Center НЕ задаём.
+               *
+               * Поэтому карта не прыгает
+               * в другую географическую точку.
+               */
+              map.jumpTo({
+                zoom:
+                  nextZoom,
+              });
+            },
+            RESPONSIVE_RESIZE_DEBOUNCE
+          );
+      };
+
+    /**
+     * MapLibre сам отслеживает изменение
+     * размера контейнера.
+     *
+     * Этот listener нужен только для
+     * нашей дополнительной responsive camera.
+     */
+    window.addEventListener(
+      "resize",
+      handleResize
+    );
+
+    return () => {
+      window.removeEventListener(
+        "resize",
+        handleResize
+      );
+
+      if (
+        responsiveResizeTimerRef.current
+      ) {
+        clearTimeout(
+          responsiveResizeTimerRef.current
+        );
+
+        responsiveResizeTimerRef.current =
+          null;
+      }
+    };
+  }, [
+    isLoaded,
   ]);
 
   /* =========================================================
@@ -749,6 +1156,15 @@ export default function MainMap({
       return;
     }
 
+    /**
+     * Город — отдельный camera mode.
+     *
+     * Responsive country resize
+     * сюда больше не вмешивается.
+     */
+    responsiveCountryViewRef.current =
+      false;
+
     mapRef.current.flyTo({
       center:
         selectedCity.coordinates,
@@ -786,6 +1202,9 @@ export default function MainMap({
     ) {
       return;
     }
+
+    responsiveCountryViewRef.current =
+      false;
 
     mapRef.current.flyTo({
       center:
