@@ -1,17 +1,4 @@
-/**
- * WorkspaceRenderer.tsx
- * ------------------------------------------------------------
- * Рендерит рабочую область текущего раздела по ключу из конфигурации.
- *
- * Источник defaults находится отдельно от React-workspace компонентов:
- *   lib/filters/defaults.ts
- *
- * Это позволяет:
- * - не импортировать React-компоненты только ради defaults;
- * - не создавать циклические зависимости;
- * - централизовать начальное состояние Sidebar.
- * ------------------------------------------------------------
- */
+"use client";
 
 import {
   lazy,
@@ -35,6 +22,20 @@ import type {
   FavoriteListing,
   ListingHistoryItem,
 } from "@/lib/supabase/api";
+
+/**
+ * Радиус поиска вокруг пользователя.
+ *
+ * null = выключен
+ * 3000 = 3 км
+ * 5000 = 5 км
+ * 10000 = 10 км
+ */
+export type SearchRadius =
+  | null
+  | 3000
+  | 5000
+  | 10000;
 
 const WORKSPACE_REGISTRY: Record<
   string,
@@ -132,7 +133,9 @@ function WorkspaceFallback() {
       )}
     >
       {[0, 1, 2].map(
-        (i) => (
+        (
+          i
+        ) => (
           <div
             key={i}
             className="h-11 animate-pulse rounded-[var(--sb-radius-control)] bg-[var(--sb-hover-bg)]"
@@ -173,6 +176,26 @@ interface WorkspaceRendererProps {
   onHistorySelect?: (
     item: ListingHistoryItem
   ) => void;
+
+  /**
+   * Запускает инструмент
+   * "Моё местоположение".
+   */
+  onLocateMe?: () => void;
+
+  /**
+   * Текущий радиус поиска.
+   *
+   * null = выключен.
+   */
+  searchRadius?: SearchRadius;
+
+  /**
+   * Изменение радиуса поиска.
+   */
+  onRadiusChange?: (
+    radius: SearchRadius
+  ) => void;
 }
 
 function WorkspaceRendererBase({
@@ -183,6 +206,9 @@ function WorkspaceRendererBase({
   onSubmit,
   onFavoriteSelect,
   onHistorySelect,
+  onLocateMe,
+  searchRadius,
+  onRadiusChange,
 }: WorkspaceRendererProps) {
   const Component =
     WORKSPACE_REGISTRY[
@@ -239,6 +265,15 @@ function WorkspaceRendererBase({
         }
         onHistorySelect={
           onHistorySelect
+        }
+        onLocateMe={
+          onLocateMe
+        }
+        searchRadius={
+          searchRadius
+        }
+        onRadiusChange={
+          onRadiusChange
         }
       />
     </Suspense>

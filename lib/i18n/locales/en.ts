@@ -91,7 +91,7 @@ export const en: Locale = {
         "History",
 
       layers:
-        "Map layers",
+        "Map tools",
 
       settings:
         "Settings",

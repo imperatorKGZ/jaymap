@@ -22,7 +22,12 @@ import {
 } from "./clusters";
 
 import {
+  createUserLocationControl,
+} from "./mapTools/UserLocationControl";
+
+import {
   fetchListingsGeoJSON,
+  fetchListingsGeoJSONByRadius,
 } from "@/lib/supabase/api";
 
 import type {
@@ -80,6 +85,52 @@ interface MainMapProps {
       number,
       number
     ];
+  } | null;
+
+  /**
+   * Вызывается из инструментов карты
+   * для запуска определения местоположения.
+   */
+  onLocateMeReady?: (
+    locateMe: () => void
+  ) => void;
+
+  /**
+   * Координаты пользователя после
+   * успешного определения местоположения.
+   */
+  onLocationChange?: (
+    coordinates: {
+      latitude: number;
+      longitude: number;
+      accuracy: number;
+    }
+  ) => void;
+
+  /**
+   * Радиус поиска вокруг пользователя.
+   *
+   * null = обычный viewport-поиск.
+   *
+   * 3000  = 3 км
+   * 5000  = 5 км
+   * 10000 = 10 км
+   */
+  searchRadius?:
+    | null
+    | 3000
+    | 5000
+    | 10000;
+
+  /**
+   * Последние известные координаты пользователя.
+   *
+   * Нужны для radius-поиска.
+   */
+  userLocation?: {
+    latitude: number;
+    longitude: number;
+    accuracy: number;
   } | null;
 }
 
@@ -304,7 +355,12 @@ export default function MainMap({
   filters,
   onListingSelect,
   focusedListing = null,
+  onLocateMeReady,
+  onLocationChange,
+  searchRadius = null,
+  userLocation = null,
 }: MainMapProps) {
+
   const mapContainer =
     useRef<HTMLDivElement>(
       null
@@ -313,6 +369,11 @@ export default function MainMap({
   const mapRef =
     useRef<
       maplibregl.Map | null
+    >(null);
+
+  const userLocationControlRef =
+    useRef<
+      maplibregl.GeolocateControl | null
     >(null);
 
   const clusterHandleRef =
@@ -398,6 +459,66 @@ export default function MainMap({
   const languageRef =
     useRef(language);
 
+  const onLocateMeReadyRef =
+    useRef<
+      ((locateMe: () => void) => void) | undefined
+    >(undefined);
+
+  /**
+   * Динамические значения храним
+   * в ref, чтобы изменение фильтра,
+   * радиуса или координат пользователя
+   * НЕ пересоздавало MapLibre instance.
+   */
+  const filtersRef =
+    useRef<
+      ListingsFilter | undefined
+    >(filters);
+
+  const searchRadiusRef =
+    useRef<
+      | null
+      | 3000
+      | 5000
+      | 10000
+    >(searchRadius);
+
+  const userLocationRef =
+    useRef<
+      {
+        latitude: number;
+        longitude: number;
+        accuracy: number;
+      } | null
+    >(userLocation);
+
+  const onLocationChangeRef =
+    useRef<
+      | ((
+          coordinates: {
+            latitude: number;
+            longitude: number;
+            accuracy: number;
+          }
+        ) => void)
+      | undefined
+    >(undefined);
+
+  onLocateMeReadyRef.current =
+    onLocateMeReady;
+
+  onLocationChangeRef.current =
+    onLocationChange;
+
+  filtersRef.current =
+    filters;
+
+  searchRadiusRef.current =
+    searchRadius;
+
+  userLocationRef.current =
+    userLocation;
+
   languageRef.current =
     language;
 
@@ -465,6 +586,35 @@ export default function MainMap({
         setupMapLayers(
           map,
           languageRef.current
+        );
+
+        const userLocationControl =
+          createUserLocationControl({
+            onLocationChange:
+              (
+                coordinates
+              ) => {
+                userLocationRef.current =
+                  coordinates;
+
+                onLocationChangeRef.current?.(
+                  coordinates
+                );
+              },
+          });
+
+        userLocationControlRef.current =
+          userLocationControl;
+
+        map.addControl(
+          userLocationControl,
+          "bottom-right"
+        );
+
+        onLocateMeReadyRef.current?.(
+          () => {
+            userLocationControl.trigger();
+          }
         );
 
         clusterHandleRef.current =
@@ -589,7 +739,7 @@ export default function MainMap({
 
               totalFloors:
                 props.total_floors !=
-                null
+                  null
                   ? Number(
                       props.total_floors
                     )
@@ -785,6 +935,9 @@ export default function MainMap({
       clusterHandleRef.current =
         null;
 
+      userLocationControlRef.current =
+        null;
+
       map.remove();
 
       mapRef.current =
@@ -969,33 +1122,86 @@ export default function MainMap({
         const map =
           mapRef.current;
 
-        const bounds =
-          map.getBounds();
-
         const currentRequestId =
           ++requestIdRef.current;
 
+        const currentRadius =
+          searchRadiusRef.current;
+
+        const currentUserLocation =
+          userLocationRef.current;
+
+        const currentFilters =
+          filtersRef.current;
+
         try {
-          const geojson =
-            await fetchListingsGeoJSON(
-              {
-                ...filters,
+          let geojson:
+            GeoJSON.FeatureCollection;
 
-                bounds: {
-                  west:
-                    bounds.getWest(),
+          /**
+           * =====================================================
+           * RADIUS SEARCH
+           * =====================================================
+           *
+           * Если радиус включён и координаты
+           * пользователя уже известны —
+           * используем PostGIS radius RPC.
+           */
+          if (
+            currentRadius !==
+              null &&
+            currentUserLocation
+          ) {
+            geojson =
+              await fetchListingsGeoJSONByRadius(
+                {
+                  ...(currentFilters ??
+                    {}),
 
-                  south:
-                    bounds.getSouth(),
+                  latitude:
+                    currentUserLocation.latitude,
 
-                  east:
-                    bounds.getEast(),
+                  longitude:
+                    currentUserLocation.longitude,
 
-                  north:
-                    bounds.getNorth(),
-                },
-              }
-            );
+                  radiusMeters:
+                    currentRadius,
+                }
+              );
+          } else {
+            /**
+             * =================================================
+             * ОБЫЧНЫЙ VIEWPORT SEARCH
+             * =================================================
+             *
+             * Радиус выключен —
+             * полностью сохраняем старую механику.
+             */
+            const bounds =
+              map.getBounds();
+
+            geojson =
+              await fetchListingsGeoJSON(
+                {
+                  ...(currentFilters ??
+                    {}),
+
+                  bounds: {
+                    west:
+                      bounds.getWest(),
+
+                    south:
+                      bounds.getSouth(),
+
+                    east:
+                      bounds.getEast(),
+
+                    north:
+                      bounds.getNorth(),
+                  },
+                }
+              );
+          }
 
           /**
            * Обновление устаревшим ответом запрещено.
@@ -1061,9 +1267,7 @@ export default function MainMap({
           );
         }
       },
-      [
-        filters,
-      ]
+      []
     );
 
   /* =========================================================
@@ -1116,6 +1320,43 @@ export default function MainMap({
   ]);
 
   /* =========================================================
+     RADIUS / LOCATION CHANGES
+     ========================================================= */
+
+  useEffect(() => {
+    if (
+      !isLoaded
+    ) {
+      return;
+    }
+
+    /**
+     * Если радиус выключен —
+     * возвращаем обычный viewport search.
+     *
+     * Если радиус включён, но координаты
+     * ещё не определены — не делаем запрос.
+     *
+     * Координаты появятся после
+     * UserLocationControl.
+     */
+    if (
+      searchRadius !==
+        null &&
+      !userLocation
+    ) {
+      return;
+    }
+
+    scheduleLoad();
+  }, [
+    searchRadius,
+    userLocation,
+    isLoaded,
+    scheduleLoad,
+  ]);
+
+  /* =========================================================
      MAP MOVEMENT
      ========================================================= */
 
@@ -1132,6 +1373,22 @@ export default function MainMap({
 
     const handleMoveEnd =
       () => {
+        /**
+         * В radius mode движение карты
+         * не должно менять центр поиска:
+         *
+         * центр = userLocation
+         *
+         * Поэтому запрос после moveend
+         * здесь нужен только в обычном режиме.
+         */
+        if (
+          searchRadiusRef.current !==
+          null
+        ) {
+          return;
+        }
+
         scheduleLoad();
       };
 
@@ -1232,10 +1489,10 @@ export default function MainMap({
   /* =========================================================
      FAVORITE FLY-TO
      =========================================================
-     
+
      Вызывается, когда пользователь нажимает
      на объявление в Sidebar → Избранное.
-     
+
      Никакой отдельной карты не создаём.
      Используем существующий MapLibre instance.
      ========================================================= */

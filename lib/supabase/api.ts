@@ -155,7 +155,117 @@ export async function fetchListingsGeoJSON(
     }
   ) as GeoJSON.FeatureCollection;
 }
+/**
+ * Получает публичный GeoJSON объявлений
+ * вокруг заданной точки пользователя.
+ *
+ * Радиусы:
+ * - 3000 м
+ * - 5000 м
+ * - 10000 м
+ *
+ * Использует отдельный PostGIS RPC:
+ * get_listings_geojson_radius
+ */
+export interface ListingRadiusQueryFilter
+  extends ListingsFilter {
+  latitude: number;
+  longitude: number;
+  radiusMeters:
+    | 3000
+    | 5000
+    | 10000;
+}
 
+export async function fetchListingsGeoJSONByRadius(
+  filters: ListingRadiusQueryFilter
+): Promise<GeoJSON.FeatureCollection> {
+  const {
+    latitude,
+    longitude,
+    radiusMeters,
+    type,
+    cityId,
+    priceMin,
+    priceMax,
+    rooms,
+    areaMin,
+    areaMax,
+    furnished,
+    parking,
+    pets,
+    params,
+  } = filters;
+
+  const {
+    data,
+    error,
+  } =
+    await supabase.rpc(
+      "get_listings_geojson_radius",
+      {
+        p_lat:
+          latitude,
+
+        p_lng:
+          longitude,
+
+        p_radius_m:
+          radiusMeters,
+
+        p_type:
+          type ?? null,
+
+        p_city_id:
+          cityId ?? null,
+
+        p_price_min:
+          priceMin ?? null,
+
+        p_price_max:
+          priceMax ?? null,
+
+        p_rooms:
+          rooms ?? null,
+
+        p_area_min:
+          areaMin ?? null,
+
+        p_area_max:
+          areaMax ?? null,
+
+        p_furnished:
+          furnished ?? null,
+
+        p_parking:
+          parking ?? null,
+
+        p_pets:
+          pets ?? null,
+
+        p_params:
+          params ?? null,
+      }
+    );
+
+  if (error) {
+    console.error(
+      "[API] fetchListingsGeoJSONByRadius error:",
+      error
+    );
+
+    throw error;
+  }
+
+  return (
+    data ?? {
+      type:
+        "FeatureCollection",
+
+      features: [],
+    }
+  ) as GeoJSON.FeatureCollection;
+}
 /* ============================================================
    CRUD объявлений
    ============================================================ */

@@ -116,7 +116,26 @@ export const HistoryIcon = (p: IconProps) => (
   </svg>
 );
 
-// 9. СЛОИ КАРТЫ
+// 9. ИНСТРУМЕНТЫ КАРТЫ
+export const MapToolsIcon = (p: IconProps) => (
+  <svg {...base} {...p}>
+    <circle cx="12" cy="12" r="3.5" />
+    <path d="M12 2.5v5" />
+    <path d="M12 16.5v5" />
+    <path d="M2.5 12h5" />
+    <path d="M16.5 12h5" />
+    <circle
+      cx="12"
+      cy="12"
+      r="1"
+      fill="currentColor"
+      stroke="none"
+    />
+  </svg>
+);
+
+// Оставляем старый экспорт,
+// чтобы ничего другого не сломать.
 export const LayersIcon = (p: IconProps) => (
   <svg {...base} {...p}>
     <path d="M12 3L2.5 8 12 13l9.5-5Z" />

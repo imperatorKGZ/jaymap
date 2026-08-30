@@ -439,7 +439,7 @@ export const ru: Locale = {
       favorites: "Избранное",
       subscriptions: "Подписки",
       history: "История",
-      layers: "Слои карты",
+      layers: "Инструменты карты",
       settings: "Настройки",
       profile: "Профиль",
     },

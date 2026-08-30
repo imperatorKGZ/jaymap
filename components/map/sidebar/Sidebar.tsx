@@ -85,6 +85,10 @@ import {
   useResponsiveUIScale,
 } from "@/components/layout/useResponsiveUIScale";
 
+import type {
+  SearchRadius,
+} from "./WorkspaceRenderer";
+
 import "./theme.css";
 
 export type SidebarTheme =
@@ -123,6 +127,27 @@ interface SidebarProps {
   onHistorySelect?: (
     item: ListingHistoryItem
   ) => void;
+
+  /**
+   * Запускает инструмент
+   * "Моё местоположение".
+   */
+  onLocateMe?: () => void;
+
+  /**
+   * Текущий радиус поиска
+   * вокруг пользователя.
+   *
+   * null = выключен.
+   */
+  searchRadius?: SearchRadius;
+
+  /**
+   * Изменение радиуса поиска.
+   */
+  onRadiusChange?: (
+    radius: SearchRadius
+  ) => void;
 }
 
 const RAIL_WIDTH = 56;
@@ -147,6 +172,12 @@ export default function Sidebar({
   onFavoriteSelect,
 
   onHistorySelect,
+
+  onLocateMe,
+
+  searchRadius,
+
+  onRadiusChange,
 }: SidebarProps) {
   const {
     t,
@@ -766,6 +797,15 @@ export default function Sidebar({
             }
             onHistorySelect={
               onHistorySelect
+            }
+            onLocateMe={
+              onLocateMe
+            }
+            searchRadius={
+              searchRadius
+            }
+            onRadiusChange={
+              onRadiusChange
             }
           />
         </div>

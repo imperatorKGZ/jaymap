@@ -2,6 +2,7 @@
 
 import {
   useCallback,
+  useRef,
   useState,
 } from "react";
 
@@ -29,6 +30,10 @@ import type {
   FavoriteListing,
   ListingHistoryItem,
 } from "@/lib/supabase/api";
+
+import type {
+  SearchRadius,
+} from "@/components/map/sidebar/WorkspaceRenderer";
 
 export default function Home() {
   const [
@@ -70,6 +75,95 @@ export default function Home() {
       number
     ];
   } | null>(null);
+
+  /**
+   * Функция запуска определения
+   * местоположения, которую предоставляет MainMap.
+   */
+  const locateMeRef =
+    useRef<
+      (() => void) | null
+    >(null);
+
+  /**
+   * Последние координаты пользователя.
+   *
+   * Используются инструментами карты,
+   * которым нужен центр поиска.
+   */
+  const [
+    userLocation,
+    setUserLocation,
+  ] = useState<{
+    latitude: number;
+    longitude: number;
+    accuracy: number;
+  } | null>(null);
+
+  /**
+   * Текущий радиус поиска вокруг пользователя.
+   *
+   * null = радиус выключен.
+   */
+  const [
+    searchRadius,
+    setSearchRadius,
+  ] = useState<SearchRadius>(
+    null
+  );
+
+  /**
+   * MainMap сообщает сюда готовую
+   * функцию запуска геолокации.
+   */
+  const handleLocateMeReady =
+    useCallback(
+      (
+        locateMe: () => void
+      ) => {
+        locateMeRef.current =
+          locateMe;
+      },
+      []
+    );
+
+  /**
+   * MainMap сообщает сюда координаты
+   * после успешного определения местоположения.
+   */
+  const handleLocationChange =
+    useCallback(
+      (coordinates: {
+        latitude: number;
+        longitude: number;
+        accuracy: number;
+      }) => {
+        setUserLocation(
+          coordinates
+        );
+      },
+      []
+    );
+
+  /**
+   * Sidebar сообщает сюда выбранный радиус.
+   *
+   * null  → выключить радиус
+   * 3000  → 3 км
+   * 5000  → 5 км
+   * 10000 → 10 км
+   */
+  const handleRadiusChange =
+    useCallback(
+      (
+        radius: SearchRadius
+      ) => {
+        setSearchRadius(
+          radius
+        );
+      },
+      []
+    );
 
   /**
    * Sidebar уже возвращает canonical ListingsFilter.
@@ -271,6 +365,22 @@ export default function Home() {
           onListingSelect={
             setSelectedListing
           }
+
+          onLocateMeReady={
+            handleLocateMeReady
+          }
+
+          onLocationChange={
+            handleLocationChange
+          }
+
+          searchRadius={
+            searchRadius
+          }
+
+          userLocation={
+            userLocation
+          }
         />
       </div>
 
@@ -295,6 +405,18 @@ export default function Home() {
 
         onHistorySelect={
           handleHistorySelect
+        }
+
+        onLocateMe={() => {
+          locateMeRef.current?.();
+        }}
+
+        searchRadius={
+          searchRadius
+        }
+
+        onRadiusChange={
+          handleRadiusChange
         }
       />
 

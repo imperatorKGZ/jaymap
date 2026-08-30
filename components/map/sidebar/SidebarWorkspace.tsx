@@ -42,6 +42,10 @@ import type {
   ListingHistoryItem,
 } from "@/lib/supabase/api";
 
+import type {
+  SearchRadius,
+} from "./WorkspaceRenderer";
+
 interface SidebarWorkspaceProps {
   mainSections: SidebarSection[];
 
@@ -67,6 +71,24 @@ interface SidebarWorkspaceProps {
   onHistorySelect?: (
     item: ListingHistoryItem
   ) => void;
+
+  /**
+   * Текущий радиус поиска вокруг пользователя.
+   */
+  searchRadius?: SearchRadius;
+
+  /**
+   * Изменение радиуса поиска.
+   */
+  onRadiusChange?: (
+    radius: SearchRadius
+  ) => void;
+
+  /**
+   * Запуск инструмента
+   * "Моё местоположение".
+   */
+  onLocateMe?: () => void;
 }
 
 function SidebarWorkspaceBase({
@@ -77,6 +99,9 @@ function SidebarWorkspaceBase({
   onApply,
   onFavoriteSelect,
   onHistorySelect,
+  searchRadius,
+  onRadiusChange,
+  onLocateMe,
 }: SidebarWorkspaceProps) {
   const {
     t,
@@ -124,6 +149,15 @@ function SidebarWorkspaceBase({
             onHistorySelect={
               onHistorySelect
             }
+            onLocateMe={
+              onLocateMe
+            }
+            searchRadius={
+              searchRadius
+            }
+            onRadiusChange={
+              onRadiusChange
+            }
           />
         </div>
       </div>
@@ -167,6 +201,15 @@ function SidebarWorkspaceBase({
             }
             onHistorySelect={
               onHistorySelect
+            }
+            onLocateMe={
+              onLocateMe
+            }
+            searchRadius={
+              searchRadius
+            }
+            onRadiusChange={
+              onRadiusChange
             }
           />
         </div>

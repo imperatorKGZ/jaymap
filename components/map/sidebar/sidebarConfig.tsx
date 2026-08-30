@@ -24,7 +24,7 @@ import {
   FavoritesIcon,
   SubscriptionsIcon,
   HistoryIcon,
-  LayersIcon,
+  MapToolsIcon,
   SettingsIcon,
   ProfileIcon,
 } from "./icons";
@@ -81,7 +81,7 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
     permissions: { requiresAuth: true },
   },
   { id: "history", titleKey: "sidebar.sections.history", icon: HistoryIcon, type: "secondary", workspace: "history" },
-  { id: "layers", titleKey: "sidebar.sections.layers", icon: LayersIcon, type: "secondary", workspace: "layers" },
+  { id: "layers", titleKey: "sidebar.sections.layers", icon: MapToolsIcon, type: "secondary", workspace: "layers" },
   { id: "settings", titleKey: "sidebar.sections.settings", icon: SettingsIcon, type: "secondary", workspace: "settings" },
   {
     id: "profile",
