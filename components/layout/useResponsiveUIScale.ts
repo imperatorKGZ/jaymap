@@ -10,24 +10,28 @@ import {
  * JAYMAP RESPONSIVE UI SCALE
  * ============================================================
  *
- * ВАЖНО:
+ * Единый responsive engine для overlay UI.
  *
- * Это масштаб ТОЛЬКО интерфейса.
+ * Используется:
  *
- * Карта MainMap сюда НЕ входит.
+ *   Navbar
+ *   Sidebar
  *
- * Baseline:
+ * MainMap сюда НЕ входит.
  *
- * 1920 × 912
+ * BASELINE:
  *
- * При viewport больше baseline:
- * scale = 1
+ *   1920 × 912
  *
- * При viewport меньше baseline:
- * UI постепенно уменьшается.
+ * Поведение ниже baseline сохраняет существующую логику.
  *
- * Ниже MIN_SCALE не опускаемся.
- * Мобильный интерфейс позже будет отдельным.
+ * Поведение выше baseline:
+ *
+ *   - UI плавно увеличивается;
+ *   - Navbar и Sidebar имеют разную максимальную величину;
+ *   - рост ограничен сверху;
+ *   - mobile/tablet логика ниже baseline не изменяется.
+ * ============================================================
  */
 
 export const RESPONSIVE_UI_DESIGN_WIDTH =
@@ -37,33 +41,99 @@ export const RESPONSIVE_UI_DESIGN_HEIGHT =
   912;
 
 /**
- * Минимальный размер desktop/tablet UI.
+ * Минимальный scale.
  *
- * Ниже этого значения позже переключимся
- * на MobileNavbar / MobileSidebar.
+ * Существующее значение сохраняем.
  */
 export const RESPONSIVE_UI_MIN_SCALE =
   0.72;
 
-function calculateResponsiveUIScale(
+/**
+ * Максимальный scale Navbar
+ * на больших desktop viewport.
+ *
+ * Было 1.18.
+ * Поднимаем до 1.28, чтобы интерфейс
+ * не терялся на больших мониторах.
+ */
+export const RESPONSIVE_UI_NAVBAR_MAX_SCALE =
+  1.28;
+
+/**
+ * Максимальный scale Sidebar.
+ *
+ * Sidebar немного меньше Navbar,
+ * чтобы не съедать рабочую область карты.
+ */
+export const RESPONSIVE_UI_SIDEBAR_MAX_SCALE =
+  1.24;
+
+/**
+ * Базовая ширина Navbar.
+ *
+ * На baseline сохраняется существующая
+ * геометрия компонента.
+ */
+export const RESPONSIVE_UI_NAVBAR_BASE_WIDTH =
+  1000;
+
+/**
+ * Максимальная логическая ширина Navbar.
+ *
+ * Пока ширину самого компонента
+ * не меняем — это только константа
+ * responsive engine.
+ */
+export const RESPONSIVE_UI_NAVBAR_MAX_WIDTH =
+  1240;
+
+/**
+ * Базовая ширина Sidebar.
+ */
+export const RESPONSIVE_UI_SIDEBAR_BASE_WIDTH =
+  360;
+
+/**
+ * Максимальная логическая ширина Sidebar.
+ */
+export const RESPONSIVE_UI_SIDEBAR_MAX_WIDTH =
+  420;
+
+export type ResponsiveUIScaleMode =
+  | "default"
+  | "navbar"
+  | "sidebar";
+
+interface ResponsiveUIScaleOptions {
+  mode?: ResponsiveUIScaleMode;
+}
+
+function clamp(
+  value: number,
+  min: number,
+  max: number
+): number {
+  return Math.min(
+    max,
+    Math.max(min, value)
+  );
+}
+
+/**
+ * ============================================================
+ * COMPACT SCALE
+ * ============================================================
+ *
+ * Ниже baseline сохраняем старую модель:
+ *
+ * scale = min(widthRatio, heightRatio)
+ *
+ * с существующим нижним пределом.
+ */
+function calculateCompactScale(
   width: number,
   height: number
 ): number {
-  if (
-    width <= 0 ||
-    height <= 0
-  ) {
-    return 1;
-  }
-
-  /**
-   * Сравниваем реальный viewport
-   * с нашим baseline сразу по двум осям.
-   *
-   * Берём меньший коэффициент,
-   * потому что именно он ограничивает
-   * доступное пространство.
-   */
   const widthScale =
     width /
     RESPONSIVE_UI_DESIGN_WIDTH;
@@ -75,29 +145,167 @@ function calculateResponsiveUIScale(
   const rawScale =
     Math.min(
       widthScale,
-      heightScale,
-      1
+      heightScale
     );
 
-  /**
-   * Не позволяем desktop/tablet UI
-   * становиться слишком маленьким.
-   *
-   * При достижении этого значения
-   * в будущем будем использовать
-   * отдельную mobile-композицию.
-   */
   return Math.max(
     RESPONSIVE_UI_MIN_SCALE,
     rawScale
   );
 }
 
-export function useResponsiveUIScale() {
+/**
+ * ============================================================
+ * LARGE DESKTOP SCALE
+ * ============================================================
+ *
+ * Выше baseline главным фактором становится
+ * ширина viewport.
+ *
+ * Мы сознательно используем width, а не
+ * min(widthRatio, heightRatio), потому что
+ * ultrawide viewport иначе остаётся слишком мелким.
+ *
+ * Диапазон нормируется:
+ *
+ *   1920 → 0
+ *   3840 → 1
+ *
+ * После этого результат переводится
+ * в диапазон:
+ *
+ *   1.00 → maxScale
+ */
+function calculateLargeDesktopScale(
+  width: number,
+  maxScale: number
+): number {
+  const widthProgress =
+    clamp(
+      (
+        width -
+          RESPONSIVE_UI_DESIGN_WIDTH
+      ) /
+        (
+          3840 -
+          RESPONSIVE_UI_DESIGN_WIDTH
+        ),
+      0,
+      1
+    );
+
+  const scale =
+    1 +
+    widthProgress *
+      (
+        maxScale -
+        1
+      );
+
+  return clamp(
+    scale,
+    1,
+    maxScale
+  );
+}
+
+/**
+ * ============================================================
+ * MAIN SCALE CALCULATION
+ * ============================================================
+ */
+function calculateResponsiveUIScale(
+  width: number,
+  height: number,
+  mode: ResponsiveUIScaleMode
+): number {
+  if (
+    width <= 0 ||
+    height <= 0
+  ) {
+    return 1;
+  }
+
+  const widthScale =
+    width /
+    RESPONSIVE_UI_DESIGN_WIDTH;
+
+  const heightScale =
+    height /
+    RESPONSIVE_UI_DESIGN_HEIGHT;
+
+  /**
+   * ----------------------------------------------------------
+   * BELOW BASELINE
+   * ----------------------------------------------------------
+   *
+   * Существующее поведение сохраняется.
+   */
+  if (
+    widthScale < 1 ||
+    heightScale < 1
+  ) {
+    return calculateCompactScale(
+      width,
+      height
+    );
+  }
+
+  /**
+   * ----------------------------------------------------------
+   * BASELINE
+   * ----------------------------------------------------------
+   */
+  if (
+    width ===
+      RESPONSIVE_UI_DESIGN_WIDTH &&
+    height ===
+      RESPONSIVE_UI_DESIGN_HEIGHT
+  ) {
+    return 1;
+  }
+
+  /**
+   * ----------------------------------------------------------
+   * LARGE DESKTOP
+   * ----------------------------------------------------------
+   */
+
+  if (
+    mode === "sidebar"
+  ) {
+    return calculateLargeDesktopScale(
+      width,
+      RESPONSIVE_UI_SIDEBAR_MAX_SCALE
+    );
+  }
+
+  /**
+   * Navbar и default.
+   */
+  return calculateLargeDesktopScale(
+    width,
+    RESPONSIVE_UI_NAVBAR_MAX_SCALE
+  );
+}
+
+/**
+ * ============================================================
+ * RESPONSIVE UI SCALE HOOK
+ * ============================================================
+ */
+export function useResponsiveUIScale(
+  options: ResponsiveUIScaleOptions = {}
+) {
+  const {
+    mode = "default",
+  } = options;
+
   const [
     scale,
     setScale,
-  ] = useState(1);
+  ] =
+    useState(1);
 
   useEffect(() => {
     let frameId:
@@ -106,10 +314,6 @@ export function useResponsiveUIScale() {
 
     const updateScale =
       () => {
-        /**
-         * Не пересчитываем DOM
-         * несколько раз подряд во время resize.
-         */
         if (
           frameId !==
           null
@@ -125,12 +329,30 @@ export function useResponsiveUIScale() {
               const nextScale =
                 calculateResponsiveUIScale(
                   window.innerWidth,
-                  window.innerHeight
+                  window.innerHeight,
+                  mode
                 );
 
               setScale(
-                nextScale
+                (
+                  previousScale
+                ) => {
+                  if (
+                    Math.abs(
+                      previousScale -
+                        nextScale
+                    ) <
+                    0.001
+                  ) {
+                    return previousScale;
+                  }
+
+                  return nextScale;
+                }
               );
+
+              frameId =
+                null;
             }
           );
       };
@@ -141,7 +363,7 @@ export function useResponsiveUIScale() {
     updateScale();
 
     /**
-     * Обычный resize.
+     * Изменение размеров окна.
      */
     window.addEventListener(
       "resize",
@@ -149,14 +371,8 @@ export function useResponsiveUIScale() {
     );
 
     /**
-     * ResizeObserver нужен потому,
-     * что размер layout может меняться
-     * не только из-за window.resize:
-     *
-     * DevTools,
-     * split view,
-     * изменение размеров iframe,
-     * контейнерные изменения и т.д.
+     * Отслеживание изменения
+     * размера document root.
      */
     const resizeObserver =
       new ResizeObserver(
@@ -186,7 +402,7 @@ export function useResponsiveUIScale() {
         );
       }
     };
-  }, []);
+  }, [mode]);
 
   return scale;
 }

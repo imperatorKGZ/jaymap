@@ -48,8 +48,6 @@ export default function Navbar({
    * RESPONSIVE UI SCALE
    * =========================================================
    *
-   * ВАЖНО:
-   *
    * Масштабируется только визуальная композиция Navbar.
    *
    * Внутренние координаты ниже НЕ меняются.
@@ -58,7 +56,9 @@ export default function Navbar({
    * этим хуком не затрагиваются.
    */
   const uiScale =
-    useResponsiveUIScale();
+    useResponsiveUIScale({
+      mode: "navbar",
+    });
 
   /*
    * =========================================================

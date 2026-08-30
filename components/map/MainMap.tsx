@@ -167,12 +167,17 @@ const RESPONSIVE_ZOOM_EPSILON =
  * Рассчитывает scale относительно
  * твоего baseline 1920×912.
  *
- * ВАЖНО:
+ * Ниже baseline:
  *
- * - больше baseline → scale 1;
- * - меньше baseline → scale < 1;
- * - карта на больших экранах НИКОГДА
- *   не становится меньше из-за этой функции.
+ * - сохраняем существующую логику;
+ * - берём меньший коэффициент ширины/высоты.
+ *
+ * Выше baseline:
+ *
+ * - ширина становится главным фактором;
+ * - высота больше не блокирует увеличение;
+ * - это позволяет ultrawide и большим desktop
+ *   сохранять сопоставимый визуальный размер страны.
  */
 function getResponsiveScale():
   number {
@@ -196,13 +201,43 @@ function getResponsiveScale():
     return 1;
   }
 
-  return Math.min(
-    1,
+  const widthScale =
     width /
-      BASELINE_WIDTH,
+    BASELINE_WIDTH;
+
+  const heightScale =
     height /
-      BASELINE_HEIGHT
-  );
+    BASELINE_HEIGHT;
+
+  /**
+   * Ниже baseline ничего не меняем:
+   * карта отдаляется относительно меньшей оси.
+   */
+  if (
+    widthScale < 1 ||
+    heightScale < 1
+  ) {
+    return Math.min(
+      widthScale,
+      heightScale,
+      1
+    );
+  }
+
+  /**
+   * На больших экранах используем именно ширину.
+   *
+   * Это ключевое отличие:
+   *
+   * 1920×1080 → 1.00
+   * 2560×1080 → 1.33
+   * 3440×1440 → 1.79
+   * 3840×2160 → 2.00
+   *
+   * Дальше масштаб ограничивается
+   * в getResponsiveCountryZoom().
+   */
+  return widthScale;
 }
 
 /**
@@ -223,18 +258,18 @@ function getResponsiveScale():
  *
  * scale < 1
  * ↓
- * zoom слегка уменьшается
+ * zoom уменьшается
+ *
+ * больше viewport:
+ *
+ * scale > 1
+ * ↓
+ * zoom увеличивается
  */
 function getResponsiveCountryZoom():
   number {
   const scale =
     getResponsiveScale();
-
-  if (
-    scale >= 1
-  ) {
-    return COUNTRY_BASE_ZOOM;
-  }
 
   const deltaZoom =
     Math.log2(
@@ -245,15 +280,18 @@ function getResponsiveCountryZoom():
     Math.max(
       -MAX_RESPONSIVE_ZOOM_OUT,
       Math.min(
-        0,
+        1,
         deltaZoom
       )
     );
 
-  return Math.max(
-    RESPONSIVE_MIN_ZOOM,
-    COUNTRY_BASE_ZOOM +
-      limitedDelta
+  return Math.min(
+    COUNTRY_BASE_ZOOM + 1,
+    Math.max(
+      RESPONSIVE_MIN_ZOOM,
+      COUNTRY_BASE_ZOOM +
+        limitedDelta
+    )
   );
 }
 
@@ -658,9 +696,13 @@ export default function MainMap({
               return;
             }
 
+            const countryZoom =
+              getResponsiveCountryZoom();
+
             if (
               map.getZoom() >
-              6.8
+              countryZoom +
+                0.1
             ) {
               /**
                * Пользователь увеличил карту.
@@ -671,7 +713,7 @@ export default function MainMap({
               map.dragPan.enable();
             } else {
               /**
-               * Возврат к country view.
+               * Возврат к responsive country view.
                */
               map.dragPan.disable();
 
@@ -681,6 +723,9 @@ export default function MainMap({
               map.easeTo({
                 center:
                   COUNTRY_CENTER,
+
+                zoom:
+                  countryZoom,
 
                 duration:
                   200,
@@ -836,8 +881,9 @@ export default function MainMap({
 
               /**
                * Разрешаем responsive camera
-               * временно опуститься ниже
-               * стандартного minZoom.
+               * временно выйти за стандартный
+               * minZoom, если viewport требует
+               * другого country zoom.
                */
               map.setMinZoom(
                 Math.min(

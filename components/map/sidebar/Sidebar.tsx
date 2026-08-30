@@ -153,7 +153,9 @@ export default function Sidebar({
   } = useTranslation();
 
   const uiScale =
-    useResponsiveUIScale();
+    useResponsiveUIScale({
+      mode: "sidebar",
+    });
 
   const state =
     useSidebarState(
