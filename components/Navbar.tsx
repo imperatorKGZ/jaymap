@@ -415,7 +415,9 @@ export default function Navbar({
     userEmail.split(
       "@"
     )[0] ||
-    "Профиль";
+    t(
+      "navbar.profile"
+    );
 
   /*
    * Пользовательская фотография берётся только
@@ -763,7 +765,9 @@ export default function Navbar({
                 onClick={
                   handleLogout
                 }
-                title="Выйти"
+                title={t(
+                  "navbar.logout"
+                )}
                 className="
                   m-0
                   flex

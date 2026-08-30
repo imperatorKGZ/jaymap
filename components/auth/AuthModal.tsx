@@ -6,6 +6,7 @@ import {
 } from "react";
 
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { useTranslation } from "@/lib/i18n";
 
 interface AuthModalProps {
   open: boolean;
@@ -21,6 +22,10 @@ export default function AuthModal({
     loading,
     signInWithGoogle,
   } = useAuth();
+
+  const {
+    t,
+  } = useTranslation();
 
   const [error, setError] =
     useState<string | null>(null);
@@ -96,7 +101,9 @@ export default function AuthModal({
         );
 
         setError(
-          "Не удалось открыть Google. Попробуйте ещё раз."
+          t(
+            "auth.errorGoogle"
+          )
         );
       }
     };
@@ -119,7 +126,9 @@ export default function AuthModal({
       {/* Backdrop */}
       <button
         type="button"
-        aria-label="Закрыть"
+        aria-label={t(
+          "auth.close"
+        )}
         onClick={onClose}
         style={{
           position: "absolute",
@@ -190,7 +199,9 @@ export default function AuthModal({
                     "-0.02em",
                 }}
               >
-                Войти в JayMap
+                {t(
+                  "auth.title"
+                )}
               </h2>
 
               <p
@@ -207,17 +218,18 @@ export default function AuthModal({
                     "rgba(255,255,255,0.52)",
                 }}
               >
-                Войдите, чтобы видеть
-                контакты, сохранять
-                объявления и размещать
-                свои объекты.
+                {t(
+                  "auth.description"
+                )}
               </p>
             </div>
 
             <button
               type="button"
               onClick={onClose}
-              aria-label="Закрыть"
+              aria-label={t(
+                "auth.close"
+              )}
               style={{
                 flexShrink: 0,
                 width: "36px",
@@ -254,7 +266,9 @@ export default function AuthModal({
         >
           <button
             type="button"
-            onClick={handleGoogleSignIn}
+            onClick={
+              handleGoogleSignIn
+            }
             disabled={loading}
             style={{
               width: "100%",
@@ -294,14 +308,17 @@ export default function AuthModal({
                 fill="#4285F4"
                 d="M21.35 12.27c0-.79-.07-1.55-.2-2.27H12v4.3h5.24a4.48 4.48 0 0 1-1.94 2.94v2.45h3.14c1.84-1.69 2.91-4.18 2.91-7.42Z"
               />
+
               <path
                 fill="#34A853"
                 d="M12 21.75c2.63 0 4.84-.87 6.45-2.36l-3.14-2.45c-.87.58-1.98.92-3.31.92-2.54 0-4.69-1.72-5.46-4.03H3.3v2.52A9.75 9.75 0 0 0 12 21.75Z"
               />
+
               <path
                 fill="#FBBC05"
                 d="M6.54 13.83A5.86 5.86 0 0 1 6.23 12c0-.64.11-1.26.31-1.83V7.65H3.3A9.74 9.74 0 0 0 2.25 12c0 1.57.38 3.06 1.05 4.35l3.24-2.52Z"
               />
+
               <path
                 fill="#EA4335"
                 d="M12 6.13c1.43 0 2.7.49 3.71 1.45l2.78-2.78C16.83 3.19 14.63 2.25 12 2.25A9.75 9.75 0 0 0 3.3 7.65l3.24 2.52C7.31 7.85 9.46 6.13 12 6.13Z"
@@ -310,15 +327,20 @@ export default function AuthModal({
 
             <span>
               {loading
-                ? "Подключение..."
-                : "Продолжить с Google"}
+                ? t(
+                    "auth.googleLoading"
+                  )
+                : t(
+                    "auth.google"
+                  )}
             </span>
           </button>
 
           {error && (
             <div
               style={{
-                marginTop: "12px",
+                marginTop:
+                  "12px",
                 padding:
                   "10px 12px",
                 border:
@@ -371,7 +393,9 @@ export default function AuthModal({
                   "0.12em",
               }}
             >
-              или
+              {t(
+                "auth.divider"
+              )}
             </span>
 
             <div
@@ -406,7 +430,9 @@ export default function AuthModal({
                   "rgba(255,255,255,0.85)",
               }}
             >
-              Вход по номеру телефона
+              {t(
+                "auth.phoneTitle"
+              )}
             </div>
 
             <div
@@ -421,8 +447,9 @@ export default function AuthModal({
                   "rgba(255,255,255,0.4)",
               }}
             >
-              Подключим SMS-вход позже.
-              Архитектура уже готова.
+              {t(
+                "auth.phoneDescription"
+              )}
             </div>
           </div>
 
@@ -445,7 +472,9 @@ export default function AuthModal({
               cursor: "pointer",
             }}
           >
-            Отмена
+            {t(
+              "auth.cancel"
+            )}
           </button>
 
           <div
@@ -462,9 +491,9 @@ export default function AuthModal({
                 "rgba(255,255,255,0.2)",
             }}
           >
-            Продолжая, вы соглашаетесь
-            с правилами использования
-            JayMap.
+            {t(
+              "auth.terms"
+            )}
           </div>
         </div>
       </div>

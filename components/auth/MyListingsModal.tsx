@@ -17,6 +17,10 @@ import {
   type City,
 } from "@/lib/cities";
 
+import {
+  useTranslation,
+} from "@/lib/i18n";
+
 import type { Language } from "@/lib/i18n";
 
 type ListingStatus =
@@ -44,70 +48,55 @@ interface MyListingsModalProps {
 const STATUS_META: Record<
   ListingStatus,
   {
-    label: string;
-    shortLabel: string;
+    key:
+      | "statusDraft"
+      | "statusPublished"
+      | "statusPaused"
+      | "statusArchived";
+    shortKey:
+      | "statusDraft"
+      | "statusPublished"
+      | "statusPaused"
+      | "statusArchived";
     className: string;
   }
 > = {
   draft: {
-    label: "Черновик",
-    shortLabel: "Черновики",
+    key:
+      "statusDraft",
+    shortKey:
+      "statusDraft",
     className:
       "border-white/10 bg-white/5 text-white/65",
   },
 
   published: {
-    label: "Опубликовано",
-    shortLabel:
-      "Опубликованные",
+    key:
+      "statusPublished",
+    shortKey:
+      "statusPublished",
     className:
       "border-[#2FD4C0]/20 bg-[#2FD4C0]/10 text-[#5FE0D0]",
   },
 
   paused: {
-    label: "На паузе",
-    shortLabel: "На паузе",
+    key:
+      "statusPaused",
+    shortKey:
+      "statusPaused",
     className:
       "border-amber-400/20 bg-amber-400/10 text-amber-300",
   },
 
   archived: {
-    label: "Архив",
-    shortLabel: "Архив",
+    key:
+      "statusArchived",
+    shortKey:
+      "statusArchived",
     className:
       "border-white/10 bg-white/[0.03] text-white/40",
   },
 };
-
-const FILTERS: Array<{
-  id: StatusFilter;
-  label: string;
-}> = [
-  {
-    id: "all",
-    label: "Все",
-  },
-  {
-    id: "published",
-    label:
-      STATUS_META.published.shortLabel,
-  },
-  {
-    id: "draft",
-    label:
-      STATUS_META.draft.shortLabel,
-  },
-  {
-    id: "paused",
-    label:
-      STATUS_META.paused.shortLabel,
-  },
-  {
-    id: "archived",
-    label:
-      STATUS_META.archived.shortLabel,
-  },
-];
 
 function formatPrice(
   price: number,
@@ -119,7 +108,8 @@ function formatPrice(
 }
 
 function formatDate(
-  value: string
+  value: string,
+  language: Language
 ): string {
   const date =
     new Date(value);
@@ -132,31 +122,58 @@ function formatDate(
     return "";
   }
 
+  const locale =
+    language === "en"
+      ? "en-US"
+      : language === "ky"
+        ? "ky-KG"
+        : "ru-RU";
+
   return new Intl.DateTimeFormat(
-    "ru-RU",
+    locale,
     {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
+      day:
+        "2-digit",
+
+      month:
+        "short",
+
+      year:
+        "numeric",
     }
   ).format(date);
 }
 
 function formatPropertyType(
-  type: MyListing["type"]
+  type: MyListing["type"],
+  t: (
+    key:
+      | "myListings.propertyRental"
+      | "myListings.propertyCommercial"
+      | "myListings.propertyLand"
+      | "myListings.propertyDaily"
+  ) => string
 ): string {
   switch (type) {
     case "rental":
-      return "Аренда";
+      return t(
+        "myListings.propertyRental"
+      );
 
     case "commercial":
-      return "Коммерция";
+      return t(
+        "myListings.propertyCommercial"
+      );
 
     case "land":
-      return "Земля";
+      return t(
+        "myListings.propertyLand"
+      );
 
     case "daily":
-      return "Посуточно";
+      return t(
+        "myListings.propertyDaily"
+      );
 
     default:
       return type;
@@ -164,7 +181,13 @@ function formatPropertyType(
 }
 
 function formatListingSummary(
-  listing: MyListing
+  listing: MyListing,
+  t: (
+    key:
+      | "listings.rooms"
+      | "listings.area"
+      | "listings.floor"
+  ) => string
 ): string {
   const parts: string[] = [];
 
@@ -173,7 +196,9 @@ function formatListingSummary(
     null
   ) {
     parts.push(
-      `${listing.rooms} комн.`
+      `${listing.rooms} ${t(
+        "listings.rooms"
+      )}`
     );
   }
 
@@ -182,7 +207,9 @@ function formatListingSummary(
     null
   ) {
     parts.push(
-      `${listing.area} м²`
+      `${listing.area} ${t(
+        "listings.area"
+      )}`
     );
   }
 
@@ -192,8 +219,12 @@ function formatListingSummary(
   ) {
     parts.push(
       listing.total_floors
-        ? `${listing.floor}/${listing.total_floors} эт.`
-        : `${listing.floor} эт.`
+        ? `${listing.floor}/${listing.total_floors} ${t(
+            "listings.floor"
+          )}`
+        : `${listing.floor} ${t(
+            "listings.floor"
+          )}`
     );
   }
 
@@ -241,6 +272,12 @@ export default function MyListingsModal({
   open,
   onClose,
 }: MyListingsModalProps) {
+  const {
+    t,
+    language,
+  } =
+    useTranslation();
+
   const [
     listings,
     setListings,
@@ -285,23 +322,68 @@ export default function MyListingsModal({
     setIsVisible,
   ] = useState(false);
 
-  /*
-   * Пока основной проект работает
-   * с текущим language-контрактом,
-   * для этого MVP используем русский.
-   *
-   * Позже подключим реальный language state
-   * профиля/приложения без изменения
-   * структуры компонента.
-   */
-  const language: Language =
-    "ru";
+  const filters =
+    useMemo(
+      () => [
+        {
+          id:
+            "all" as const,
+
+          label:
+            t(
+              "myListings.all"
+            ),
+        },
+
+        {
+          id:
+            "published" as const,
+
+          label:
+            t(
+              "listings.statusPublished"
+            ),
+        },
+
+        {
+          id:
+            "draft" as const,
+
+          label:
+            t(
+              "listings.statusDraft"
+            ),
+        },
+
+        {
+          id:
+            "paused" as const,
+
+          label:
+            t(
+              "listings.statusPaused"
+            ),
+        },
+
+        {
+          id:
+            "archived" as const,
+
+          label:
+            t(
+              "listings.statusArchived"
+            ),
+        },
+      ],
+      [t]
+    );
 
   useEffect(() => {
     if (!open) {
       setIsVisible(
         false
       );
+
       return;
     }
 
@@ -354,13 +436,15 @@ export default function MyListingsModal({
           );
 
           setError(
-            "Не удалось загрузить объявления."
+            t(
+              "myListings.loadErrorTitle"
+            )
           );
         } finally {
           setLoading(false);
         }
       },
-      []
+      [t]
     );
 
   useEffect(() => {
@@ -414,7 +498,8 @@ export default function MyListingsModal({
     }
 
     return () => {
-      cancelled = true;
+      cancelled =
+        true;
     };
   }, [
     open,
@@ -437,16 +522,17 @@ export default function MyListingsModal({
       return;
     }
 
-    const handleKeyDown = (
-      event: KeyboardEvent
-    ) => {
-      if (
-        event.key ===
-        "Escape"
-      ) {
-        onClose();
-      }
-    };
+    const handleKeyDown =
+      (
+        event: KeyboardEvent
+      ) => {
+        if (
+          event.key ===
+          "Escape"
+        ) {
+          onClose();
+        }
+      };
 
     window.addEventListener(
       "keydown",
@@ -542,7 +628,9 @@ export default function MyListingsModal({
       {/* Backdrop */}
       <button
         type="button"
-        aria-label="Закрыть"
+        aria-label={t(
+          "common.close"
+        )}
         onClick={
           handleClose
         }
@@ -572,21 +660,31 @@ export default function MyListingsModal({
                 id="my-listings-title"
                 className="text-[22px] font-semibold tracking-tight text-white"
               >
-                Мои объявления
+                {t(
+                  "myListings.title"
+                )}
               </h2>
 
               <p className="mt-1 text-[12px] text-white/40">
                 {listings.length ===
                 0
-                  ? "Управление вашими объявлениями"
+                  ? t(
+                      "myListings.description"
+                    )
                   : `${listings.length} ${
                       listings.length ===
                       1
-                        ? "объявление"
+                        ? t(
+                            "myListings.countOne"
+                          )
                         : listings.length <
                             5
-                          ? "объявления"
-                          : "объявлений"
+                          ? t(
+                              "myListings.countFew"
+                            )
+                          : t(
+                              "myListings.countMany"
+                            )
                     }`}
               </p>
             </div>
@@ -596,7 +694,9 @@ export default function MyListingsModal({
               onClick={
                 handleClose
               }
-              aria-label="Закрыть"
+              aria-label={t(
+                "common.close"
+              )}
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/55 transition hover:bg-white/10 hover:text-white"
             >
               <svg
@@ -617,7 +717,7 @@ export default function MyListingsModal({
           {/* Filters */}
           <div className="mt-4 overflow-x-auto">
             <div className="flex min-w-max gap-1.5">
-              {FILTERS.map(
+              {filters.map(
                 (filter) => {
                   const active =
                     activeFilter ===
@@ -678,7 +778,9 @@ export default function MyListingsModal({
                 <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/10 border-t-[#2FD4C0]" />
 
                 <span className="text-[12px] text-white/40">
-                  Загружаем объявления…
+                  {t(
+                    "myListings.loading"
+                  )}
                 </span>
               </div>
             </div>
@@ -686,8 +788,9 @@ export default function MyListingsModal({
             <div className="flex h-full min-h-[320px] items-center justify-center">
               <div className="max-w-[360px] rounded-2xl border border-red-400/10 bg-red-400/[0.04] px-6 py-6 text-center">
                 <div className="text-[14px] font-medium text-white/85">
-                  Не удалось загрузить
-                  объявления
+                  {t(
+                    "myListings.loadErrorTitle"
+                  )}
                 </div>
 
                 <div className="mt-2 text-[12px] leading-relaxed text-white/40">
@@ -701,7 +804,9 @@ export default function MyListingsModal({
                   }
                   className="mt-4 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-[12px] font-medium text-white/70 transition hover:bg-white/10 hover:text-white"
                 >
-                  Повторить
+                  {t(
+                    "common.retry"
+                  )}
                 </button>
               </div>
             </div>
@@ -729,17 +834,33 @@ export default function MyListingsModal({
                 <div className="mt-4 text-[15px] font-medium text-white/80">
                   {activeFilter ===
                   "all"
-                    ? "У вас пока нет объявлений"
-                    : `Нет объявлений со статусом «${
-                        STATUS_META[
-                          activeFilter
-                        ].label
+                    ? t(
+                        "myListings.emptyTitle"
+                      )
+                    : `${t(
+                        "myListings.emptyFilteredTitle"
+                      )} «${
+                        t(
+                          `listings.${
+                            activeFilter ===
+                            "draft"
+                              ? "statusDraft"
+                              : activeFilter ===
+                                  "published"
+                                ? "statusPublished"
+                                : activeFilter ===
+                                    "paused"
+                                  ? "statusPaused"
+                                  : "statusArchived"
+                          }`
+                        )
                       }»`}
                 </div>
 
                 <div className="mt-2 text-[12px] leading-relaxed text-white/35">
-                  Здесь будут отображаться
-                  ваши объявления.
+                  {t(
+                    "myListings.emptyDescription"
+                  )}
                 </div>
               </div>
             </div>
@@ -764,7 +885,8 @@ export default function MyListingsModal({
 
                   const summary =
                     formatListingSummary(
-                      listing
+                      listing,
+                      t
                     );
 
                   const cover =
@@ -807,11 +929,13 @@ export default function MyListingsModal({
                                   height="16"
                                   rx="2"
                                 />
+
                                 <circle
                                   cx="8"
                                   cy="9"
                                   r="1.5"
                                 />
+
                                 <path d="M21 15l-5-5L6 20" />
                               </svg>
                             </div>
@@ -819,7 +943,9 @@ export default function MyListingsModal({
 
                           {listing.is_premium && (
                             <div className="absolute left-3 top-3 rounded-full border border-amber-300/20 bg-amber-300/10 px-2 py-1 text-[10px] font-medium text-amber-200">
-                              Premium
+                              {t(
+                                "myListings.premium"
+                              )}
                             </div>
                           )}
                         </div>
@@ -829,9 +955,12 @@ export default function MyListingsModal({
                           <div className="flex items-start justify-between gap-4">
                             <div className="min-w-0">
                               <div className="text-[11px] uppercase tracking-[0.08em] text-white/30">
-                                {formatPropertyType(
-                                  listing.type
-                                )}
+                                {
+                                  formatPropertyType(
+                                    listing.type,
+                                    t
+                                  )
+                                }
                               </div>
 
                               <h3 className="mt-1 line-clamp-2 text-[14px] font-semibold leading-snug text-white/90">
@@ -844,9 +973,9 @@ export default function MyListingsModal({
                             <span
                               className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-medium ${statusMeta.className}`}
                             >
-                              {
-                                statusMeta.label
-                              }
+                              {t(
+                                `listings.${statusMeta.key}`
+                              )}
                             </span>
                           </div>
 
@@ -858,8 +987,8 @@ export default function MyListingsModal({
                           </div>
 
                           {cityName ||
-                            listing.district ||
-                            listing.address ? (
+                          listing.district ||
+                          listing.address ? (
                             <div className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[11px] text-white/45">
                               <svg
                                 width="13"
@@ -873,6 +1002,7 @@ export default function MyListingsModal({
                                 className="shrink-0"
                               >
                                 <path d="M12 21s7-6.2 7-12a7 7 0 10-14 0c0 5.8 7 12 7 12z" />
+
                                 <circle
                                   cx="12"
                                   cy="9"
@@ -908,7 +1038,8 @@ export default function MyListingsModal({
                             <div className="text-[10px] text-white/25">
                               {
                                 formatDate(
-                                  listing.created_at
+                                  listing.created_at,
+                                  language
                                 )
                               }
                             </div>
@@ -932,14 +1063,21 @@ export default function MyListingsModal({
               <div className="flex items-center justify-between text-[10px] text-white/25">
                 <span>
                   {citiesLoading
-                    ? "Загружаем города…"
-                    : "Мои объявления"}
+                    ? t(
+                        "myListings.loadingCities"
+                      )
+                    : t(
+                        "myListings.title"
+                      )}
                 </span>
 
                 <span>
                   {
                     filteredListings.length
-                  } из{" "}
+                  }{" "}
+                  {t(
+                    "myListings.filteredOf"
+                  )}{" "}
                   {
                     listings.length
                   }

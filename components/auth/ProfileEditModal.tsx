@@ -10,6 +10,10 @@ import {
   useAuth,
 } from "@/lib/auth/AuthProvider";
 
+import {
+  useTranslation,
+} from "@/lib/i18n";
+
 interface ProfileEditModalProps {
   open: boolean;
   onClose: () => void;
@@ -33,6 +37,10 @@ export default function ProfileEditModal({
     profile,
     refreshProfile,
   } = useAuth();
+
+  const {
+    t,
+  } = useTranslation();
 
   const fileInputRef =
     useRef<HTMLInputElement | null>(
@@ -145,7 +153,9 @@ export default function ProfileEditModal({
         )
       ) {
         setError(
-          "Поддерживаются только JPG, PNG и WebP."
+          t(
+            "profile.photoTypeError"
+          )
         );
 
         return;
@@ -156,7 +166,9 @@ export default function ProfileEditModal({
         MAX_AVATAR_SIZE
       ) {
         setError(
-          "Размер изображения не должен превышать 5 МБ."
+          t(
+            "profile.photoSizeError"
+          )
         );
 
         return;
@@ -344,7 +356,9 @@ export default function ProfileEditModal({
         );
 
         setError(
-          "Не удалось удалить фото. Попробуйте ещё раз."
+          t(
+            "profile.avatarDeleteError"
+          )
         );
       } finally {
         setDeletingAvatar(
@@ -360,7 +374,9 @@ export default function ProfileEditModal({
 
       if (!trimmedName) {
         setError(
-          "Введите имя."
+          t(
+            "profile.nameRequired"
+          )
         );
 
         return;
@@ -370,7 +386,9 @@ export default function ProfileEditModal({
         trimmedName.length < 2
       ) {
         setError(
-          "Имя должно содержать минимум 2 символа."
+          t(
+            "profile.nameTooShort"
+          )
         );
 
         return;
@@ -380,7 +398,9 @@ export default function ProfileEditModal({
         trimmedName.length > 80
       ) {
         setError(
-          "Имя слишком длинное."
+          t(
+            "profile.nameTooLong"
+          )
         );
 
         return;
@@ -498,7 +518,9 @@ export default function ProfileEditModal({
 
         await refreshProfile();
 
-        setSuccess(true);
+        setSuccess(
+          true
+        );
 
         setTimeout(() => {
           onClose();
@@ -512,10 +534,14 @@ export default function ProfileEditModal({
         );
 
         setError(
-          "Не удалось сохранить профиль. Попробуйте ещё раз."
+          t(
+            "profile.profileSaveError"
+          )
         );
       } finally {
-        setSaving(false);
+        setSaving(
+          false
+        );
       }
     };
 
@@ -550,7 +576,9 @@ export default function ProfileEditModal({
         onClick={
           onClose
         }
-        aria-label="Закрыть"
+        aria-label={t(
+          "common.close"
+        )}
         style={{
           position:
             "absolute",
@@ -646,7 +674,9 @@ export default function ProfileEditModal({
                     700,
                 }}
               >
-                Профиль
+                {t(
+                  "profile.title"
+                )}
               </h2>
 
               <p
@@ -661,8 +691,9 @@ export default function ProfileEditModal({
                     "rgba(255,255,255,0.45)",
                 }}
               >
-                Измените имя и
-                контактные данные.
+                {t(
+                  "profile.description"
+                )}
               </p>
             </div>
 
@@ -671,6 +702,9 @@ export default function ProfileEditModal({
               onClick={
                 onClose
               }
+              aria-label={t(
+                "common.close"
+              )}
               style={{
                 width:
                   "36px",
@@ -859,7 +893,9 @@ export default function ProfileEditModal({
                   "rgba(255,255,255,0.38)",
               }}
             >
-              JPG, PNG или WebP · до 5 МБ
+              {t(
+                "profile.avatarHint"
+              )}
             </div>
 
             {avatarPreview &&
@@ -889,7 +925,9 @@ export default function ProfileEditModal({
                       "pointer",
                   }}
                 >
-                  Убрать выбранное фото
+                  {t(
+                    "profile.removeSelectedAvatar"
+                  )}
                 </button>
               )}
 
@@ -933,8 +971,12 @@ export default function ProfileEditModal({
                   }}
                 >
                   {deletingAvatar
-                    ? "Удаляем..."
-                    : "Удалить фото"}
+                    ? t(
+                        "profile.deleting"
+                      )
+                    : t(
+                        "profile.deletePhoto"
+                      )}
                 </button>
               )}
           </div>
@@ -967,7 +1009,9 @@ export default function ProfileEditModal({
                   "rgba(255,255,255,0.62)",
               }}
             >
-              Имя
+              {t(
+                "profile.displayName"
+              )}
             </span>
 
             <input
@@ -981,7 +1025,9 @@ export default function ProfileEditModal({
                   event.target.value
                 )
               }
-              placeholder="Ваше имя"
+              placeholder={t(
+                "profile.yourName"
+              )}
               maxLength={80}
               style={{
                 width:
@@ -1042,7 +1088,9 @@ export default function ProfileEditModal({
                   "rgba(255,255,255,0.62)",
               }}
             >
-              Email
+              {t(
+                "profile.email"
+              )}
             </span>
 
             <input
@@ -1110,7 +1158,9 @@ export default function ProfileEditModal({
                   "rgba(255,255,255,0.62)",
               }}
             >
-              Телефон
+              {t(
+                "profile.phone"
+              )}
             </span>
 
             <input
@@ -1211,7 +1261,9 @@ export default function ProfileEditModal({
                   "12px",
               }}
             >
-              Профиль сохранён.
+              {t(
+                "profile.savedMessage"
+              )}
             </div>
           )}
 
@@ -1268,7 +1320,9 @@ export default function ProfileEditModal({
                     : 1,
               }}
             >
-              Отмена
+              {t(
+                "common.cancel"
+              )}
             </button>
 
             <button
@@ -1316,8 +1370,12 @@ export default function ProfileEditModal({
               }}
             >
               {saving
-                ? "Сохранение..."
-                : "Сохранить"}
+                ? t(
+                    "profile.saveLoading"
+                  )
+                : t(
+                    "common.save"
+                  )}
             </button>
           </div>
         </div>

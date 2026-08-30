@@ -36,6 +36,10 @@ import {
   useAuth,
 } from "@/lib/auth/AuthProvider";
 
+import {
+  useTranslation,
+} from "@/lib/i18n";
+
 export interface PopupListing {
   id: string;
   title: string;
@@ -88,6 +92,10 @@ export default function ListingPopup({
   const {
     user,
   } = useAuth();
+
+  const {
+    t,
+  } = useTranslation();
 
   const [
     currentPhoto,
@@ -491,7 +499,9 @@ export default function ListingPopup({
         />
       ),
       text:
-        `${listing.rooms} комн.`,
+        `${listing.rooms} ${t(
+          "listingPopup.rooms"
+        )}`,
     });
   }
 
@@ -506,7 +516,9 @@ export default function ListingPopup({
         />
       ),
       text:
-        `${listing.area} м²`,
+        `${listing.area} ${t(
+          "listingPopup.area"
+        )}`,
     });
   }
 
@@ -516,8 +528,12 @@ export default function ListingPopup({
   ) {
     const floorText =
       listing.totalFloors
-        ? `${listing.floor}/${listing.totalFloors} эт.`
-        : `${listing.floor} эт.`;
+        ? `${listing.floor}/${listing.totalFloors} ${t(
+            "listingPopup.floor"
+          )}`
+        : `${listing.floor} ${t(
+            "listingPopup.floor"
+          )}`;
 
     params.push({
       icon: (
@@ -539,7 +555,10 @@ export default function ListingPopup({
           size={16}
         />
       ),
-      text: "С мебелью",
+      text:
+        t(
+          "listingPopup.furnished"
+        ),
     });
   }
 
@@ -552,7 +571,10 @@ export default function ListingPopup({
           size={16}
         />
       ),
-      text: "Парковка",
+      text:
+        t(
+          "listingPopup.parking"
+        ),
     });
   }
 
@@ -565,7 +587,10 @@ export default function ListingPopup({
           size={16}
         />
       ),
-      text: "Животные",
+      text:
+        t(
+          "listingPopup.pets"
+        ),
     });
   }
 
@@ -633,6 +658,7 @@ export default function ListingPopup({
               detail: {
                 listingId:
                   listing.id,
+
                 isFavorite:
                   nextState,
               },
@@ -703,8 +729,12 @@ export default function ListingPopup({
               }}
               aria-label={
                 isFavorite
-                  ? "Убрать из избранного"
-                  : "Добавить в избранное"
+                  ? t(
+                      "listingPopup.unfavorite"
+                    )
+                  : t(
+                      "listingPopup.favorite"
+                    )
               }
               aria-pressed={
                 isFavorite
@@ -727,7 +757,9 @@ export default function ListingPopup({
                 handleClose
               }
               className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white/70 transition hover:bg-black/60 hover:text-white"
-              aria-label="Закрыть"
+              aria-label={t(
+                "listingPopup.close"
+              )}
             >
               <svg
                 width="18"
@@ -763,7 +795,9 @@ export default function ListingPopup({
                       currentPhoto
                     ]
                   }
-                  alt={`Фото ${
+                  alt={`${t(
+                    "listingPopup.photo"
+                  )} ${
                     currentPhoto +
                     1
                   }`}
@@ -789,7 +823,9 @@ export default function ListingPopup({
                         prevPhoto
                       }
                       className="absolute left-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white/80 transition hover:bg-black/60"
-                      aria-label="Предыдущее фото"
+                      aria-label={t(
+                        "listingPopup.previousPhoto"
+                      )}
                     >
                       <ChevronLeftIcon
                         size={
@@ -804,7 +840,9 @@ export default function ListingPopup({
                         nextPhoto
                       }
                       className="absolute right-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white/80 transition hover:bg-black/60"
-                      aria-label="Следующее фото"
+                      aria-label={t(
+                        "listingPopup.nextPhoto"
+                      )}
                     >
                       <ChevronRightIcon
                         size={
@@ -817,7 +855,9 @@ export default function ListingPopup({
               </>
             ) : (
               <div className="flex h-full w-full items-center justify-center text-sm text-white/40">
-                Нет фото
+                {t(
+                  "listingPopup.noPhotos"
+                )}
               </div>
             )}
           </div>
@@ -897,7 +937,9 @@ export default function ListingPopup({
                       }
                       className="mt-1 text-[12px] font-medium text-[#2FD4C0] transition hover:text-[#3EE8D4]"
                     >
-                      Показать полностью
+                      {t(
+                        "listingPopup.showMore"
+                      )}
                     </button>
                   )}
               </div>
@@ -916,7 +958,9 @@ export default function ListingPopup({
                   />
 
                   <p className="text-center text-[13px] text-white/50">
-                    Войдите, чтобы увидеть контакты
+                    {t(
+                      "listingPopup.loginToSeeContacts"
+                    )}
                   </p>
 
                   <button
@@ -928,7 +972,9 @@ export default function ListingPopup({
                     }
                     className="rounded-full bg-[#2FD4C0] px-5 py-2 text-[13px] font-semibold text-[#0a0f14] transition hover:bg-[#3EE8D4]"
                   >
-                    Войти
+                    {t(
+                      "listingPopup.login"
+                    )}
                   </button>
                 </div>
               ) : contactsLoading ? (
@@ -993,7 +1039,9 @@ export default function ListingPopup({
                 </div>
               ) : (
                 <p className="text-[13px] text-white/40">
-                  Контакты не указаны
+                  {t(
+                    "listingPopup.contactsUnavailable"
+                  )}
                 </p>
               )}
             </div>
