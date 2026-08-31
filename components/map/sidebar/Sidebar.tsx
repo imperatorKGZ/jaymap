@@ -76,6 +76,10 @@ import {
   useTranslation,
 } from "@/lib/i18n";
 
+import {
+  useSettings,
+} from "@/lib/settings/provider";
+
 import type {
   FavoriteListing,
   ListingHistoryItem,
@@ -182,6 +186,10 @@ export default function Sidebar({
   const {
     t,
   } = useTranslation();
+
+  const {
+    theme: settingsTheme,
+  } = useSettings();
 
   const uiScale =
     useResponsiveUIScale({
@@ -565,7 +573,7 @@ export default function Sidebar({
   return (
     <div
       data-sidebar-theme={
-        theme
+        settingsTheme
       }
     >
       <SidebarOverlay

@@ -35,7 +35,15 @@ import type {
   SearchRadius,
 } from "@/components/map/sidebar/WorkspaceRenderer";
 
+import {
+  useSettings,
+} from "@/lib/settings/provider";
+
 export default function Home() {
+  const {
+    theme,
+  } = useSettings();
+
   const [
     selectedCity,
     setSelectedCity,
@@ -393,7 +401,7 @@ export default function Home() {
 
       {/* Sidebar */}
       <Sidebar
-        theme="dark"
+        theme={theme}
 
         onApplyFilters={
           handleApplyFilters

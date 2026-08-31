@@ -4,6 +4,7 @@ import "./globals.css";
 
 import { LanguageProvider } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth/AuthProvider";
+import { SettingsProvider } from "@/lib/settings/provider";
 
 export const metadata: Metadata = {
   title: "MapKG",
@@ -20,7 +21,9 @@ export default function RootLayout({
       <body>
         <LanguageProvider>
           <AuthProvider>
-            {children}
+            <SettingsProvider>
+              {children}
+            </SettingsProvider>
           </AuthProvider>
         </LanguageProvider>
       </body>

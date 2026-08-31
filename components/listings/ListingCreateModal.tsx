@@ -30,6 +30,10 @@ import {
   persistListing,
 } from "@/lib/listings/persistence";
 
+import {
+  getMyListings,
+} from "@/lib/supabase/api";
+
 export type ListingCreateType =
   | "rental"
   | "commercial"
@@ -218,6 +222,7 @@ export default function ListingCreateModal({
   const {
     user,
     profile,
+    profileLoading,
   } = useAuth();
 
   const [
@@ -273,6 +278,16 @@ export default function ListingCreateModal({
     setPersisting,
   ] = useState(false);
 
+  const [
+    listingLimitChecking,
+    setListingLimitChecking,
+  ] = useState(true);
+
+  const [
+    listingLimitReached,
+    setListingLimitReached,
+  ] = useState(false);
+
   useEffect(() => {
     if (!open) {
       return;
@@ -295,6 +310,9 @@ export default function ListingCreateModal({
 
     setPersisting(false);
 
+    setListingLimitChecking(true);
+    setListingLimitReached(false);
+
     const previousOverflow =
       document.body.style
         .overflow;
@@ -309,6 +327,74 @@ export default function ListingCreateModal({
   }, [
     open,
     profile?.contact_phone,
+  ]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    if (profileLoading) {
+      return;
+    }
+
+    if (!user || profile?.role !== "user") {
+      setListingLimitReached(false);
+      setListingLimitChecking(false);
+
+      return;
+    }
+
+    let cancelled = false;
+
+    const checkListingLimit =
+      async () => {
+        try {
+          const listings =
+            await getMyListings();
+
+          if (cancelled) {
+            return;
+          }
+
+          const publishedCount =
+            listings.filter(
+              (listing) =>
+                listing.status ===
+                "published"
+            ).length;
+
+          setListingLimitReached(
+            publishedCount >= 3
+          );
+        } catch (error) {
+          if (!cancelled) {
+            console.error(
+              "[ListingCreateModal] Listing limit check failed:",
+              error
+            );
+
+            // Серверная проверка всё равно остаётся источником истины.
+            // При ошибке проверки не блокируем форму заранее.
+            setListingLimitReached(false);
+          }
+        } finally {
+          if (!cancelled) {
+            setListingLimitChecking(false);
+          }
+        }
+      };
+
+    void checkListingLimit();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    open,
+    profileLoading,
+    profile?.role,
+    user,
   ]);
 
   useEffect(() => {
@@ -1071,11 +1157,24 @@ export default function ListingCreateModal({
           error
         );
 
-        setError(
+        const errorMessage =
           error instanceof Error
             ? error.message
-            : "Не удалось сохранить объявление."
-        );
+            : "Не удалось сохранить объявление.";
+
+        if (
+          errorMessage.includes(
+            "Обычный пользователь может иметь не более 3 опубликованных объявлений."
+          )
+        ) {
+          setError(
+            "Вы достигли лимита объявлений. Чтобы разместить новое объявление, удалите или приостановите одно из уже опубликованных."
+          );
+        } else {
+          setError(
+            errorMessage
+          );
+        }
       } finally {
         setPersisting(
           false
@@ -1369,9 +1468,185 @@ export default function ListingCreateModal({
           </div>
         </div>
 
-        {/* =====================================================
-            STEP 1
-           ===================================================== */}
+        {listingLimitChecking ? (
+          <div
+            style={{
+              minHeight:
+                "360px",
+              display:
+                "flex",
+              flexDirection:
+                "column",
+              alignItems:
+                "center",
+              justifyContent:
+                "center",
+              padding:
+                "40px 30px",
+              textAlign:
+                "center",
+            }}
+          >
+            <div
+              style={{
+                width:
+                  "34px",
+                height:
+                  "34px",
+                border:
+                  "2px solid rgba(255,255,255,0.12)",
+                borderTopColor:
+                  "#6FC9C2",
+                borderRadius:
+                  "50%",
+                animation:
+                  "spin 0.8s linear infinite",
+              }}
+            />
+          </div>
+        ) : listingLimitReached ? (
+          <div
+            style={{
+              minHeight:
+                "360px",
+              display:
+                "flex",
+              flexDirection:
+                "column",
+              alignItems:
+                "center",
+              justifyContent:
+                "center",
+              padding:
+                "40px 30px",
+              textAlign:
+                "center",
+            }}
+          >
+            <div
+              style={{
+                width:
+                  "58px",
+                height:
+                  "58px",
+                display:
+                  "flex",
+                alignItems:
+                  "center",
+                justifyContent:
+                  "center",
+                borderRadius:
+                  "18px",
+                border:
+                  "1px solid rgba(255,90,90,0.22)",
+                background:
+                  "rgba(255,90,90,0.08)",
+                color:
+                  "#ff9d9d",
+                fontSize:
+                  "25px",
+                fontWeight:
+                  700,
+              }}
+            >
+              !
+            </div>
+
+            <h3
+              style={{
+                margin:
+                  "20px 0 0",
+                fontSize:
+                  "20px",
+                lineHeight:
+                  "1.25",
+                fontWeight:
+                  700,
+                letterSpacing:
+                  "-0.02em",
+              }}
+            >
+              Вы достигли лимита
+            </h3>
+
+            <p
+              style={{
+                margin:
+                  "10px 0 0",
+                maxWidth:
+                  "390px",
+                fontSize:
+                  "13px",
+                lineHeight:
+                  "1.6",
+                color:
+                  "rgba(255,255,255,0.5)",
+              }}
+            >
+              Обычный пользователь может одновременно иметь не более 3 опубликованных объявлений.
+            </p>
+
+            <div
+              style={{
+                marginTop:
+                  "12px",
+                maxWidth:
+                  "390px",
+                padding:
+                  "12px 14px",
+                border:
+                  "1px solid rgba(255,255,255,0.08)",
+                borderRadius:
+                  "12px",
+                background:
+                  "rgba(255,255,255,0.03)",
+                color:
+                  "rgba(255,255,255,0.42)",
+                fontSize:
+                  "11px",
+                lineHeight:
+                  "1.55",
+              }}
+            >
+              Чтобы разместить новое объявление, удалите или приостановите одно из уже опубликованных.
+            </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                marginTop:
+                  "24px",
+                minWidth:
+                  "130px",
+                height:
+                  "42px",
+                padding:
+                  "0 18px",
+                border:
+                  "1px solid rgba(255,255,255,0.10)",
+                borderRadius:
+                  "999px",
+                background:
+                  "rgba(255,255,255,0.05)",
+                color:
+                  "rgba(255,255,255,0.75)",
+                fontSize:
+                  "12px",
+                fontWeight:
+                  600,
+                cursor:
+                  "pointer",
+              }}
+            >
+              Понятно
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* =====================================================
+                STEP 1
+               ===================================================== */}
 
         {step === 1 && (
           <div
@@ -3872,6 +4147,9 @@ export default function ListingCreateModal({
               </button>
             </div>
           </div>
+        )}
+
+          </>
         )}
 
         {/* Preview */}
