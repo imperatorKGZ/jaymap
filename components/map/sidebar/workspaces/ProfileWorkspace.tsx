@@ -30,6 +30,8 @@ import AuthModal from "@/components/auth/AuthModal";
 
 import ProfileEditModal from "@/components/auth/ProfileEditModal";
 
+import RealtorApplicationModal from "./RealtorApplicationModal";
+
 import {
   deleteListingPermanently,
   type ListingStatus,
@@ -80,6 +82,11 @@ function ProfileWorkspace(
   const [
     editProfileOpen,
     setEditProfileOpen,
+  ] = useState(false);
+
+  const [
+    realtorApplicationOpen,
+    setRealtorApplicationOpen,
   ] = useState(false);
 
   const [
@@ -141,6 +148,20 @@ function ProfileWorkspace(
   const avatarUrl =
   profile?.avatar_url?.trim() ||
   null;
+
+  const handleOpenRealtorApplication =
+    () => {
+      if (
+        !user ||
+        profile?.role !== "user"
+      ) {
+        return;
+      }
+
+      setRealtorApplicationOpen(
+        true
+      );
+    };
 
   const handleLogout =
     async () => {
@@ -388,31 +409,45 @@ function ProfileWorkspace(
             onClick={() =>
               setEditProfileOpen(true)
             }
-            className="group relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-[var(--sb-accent-soft)] text-[var(--sb-accent)]"
+            className={[
+              "group relative flex h-16 w-16 items-center justify-center rounded-full text-[var(--sb-accent)]",
+              profile?.role === "realtor"
+                ? "bg-[linear-gradient(135deg,#F8E3A8_0%,#D5A84B_45%,#A87524_100%)] p-[2px] shadow-[0_0_0_3px_rgba(213,168,75,0.08),0_4px_18px_rgba(168,117,36,0.18)]"
+                : "overflow-hidden bg-[var(--sb-accent-soft)]",
+            ].join(" ")}
             aria-label="Редактировать профиль"
           >
-            {avatarUrl ? (
-              <img
-                src={avatarUrl}
-                alt={displayName}
-                onError={(event) => {
-                  event.currentTarget.onerror = null;
-                  event.currentTarget.src =
-                    "/jaymap-default-avatar.svg";
-                }}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <img
-                src="/jaymap-default-avatar.svg"
-                alt="JayMap"
-                className="h-full w-full object-cover"
-              />
-            )}
+            <span
+              className={[
+                "relative flex h-full w-full items-center justify-center rounded-full",
+                profile?.role === "realtor"
+                  ? "overflow-hidden bg-[var(--sb-accent-soft)]"
+                  : "",
+              ].join(" ")}
+            >
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt={displayName}
+                  onError={(event) => {
+                    event.currentTarget.onerror = null;
+                    event.currentTarget.src =
+                      "/jaymap-default-avatar.svg";
+                  }}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <img
+                  src="/jaymap-default-avatar.svg"
+                  alt="JayMap"
+                  className="h-full w-full object-cover"
+                />
+              )}
 
-            <span className="absolute inset-0 flex items-center justify-center bg-black/40 text-white opacity-0 transition group-hover:opacity-100">
-              <span className="text-[11px] font-semibold">
-                Изменить
+              <span className="absolute inset-0 flex items-center justify-center bg-black/40 text-white opacity-0 transition group-hover:opacity-100">
+                <span className="text-[11px] font-semibold">
+                  Изменить
+                </span>
               </span>
             </span>
           </button>
@@ -420,6 +455,24 @@ function ProfileWorkspace(
           <p className="mt-3 text-[15px] font-semibold text-[var(--sb-text-strong)]">
             {displayName}
           </p>
+
+          {profile?.role === "realtor" && (
+            <span
+              className="mt-2 inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold tracking-[0.02em]"
+              style={{
+                borderColor:
+                  "rgba(213,168,75,0.32)",
+                background:
+                  "linear-gradient(135deg, rgba(244,213,141,0.16), rgba(168,117,36,0.12))",
+                color:
+                  "#E8C871",
+                boxShadow:
+                  "0 2px 10px rgba(168,117,36,0.10)",
+              }}
+            >
+              Риелтор
+            </span>
+          )}
 
           {user?.email && (
             <p className="mt-1 max-w-full truncate text-[11px] text-[var(--sb-text-muted)]">
@@ -455,6 +508,18 @@ function ProfileWorkspace(
           >
             Настройки профиля
           </button>
+
+          {profile?.role === "user" && (
+            <button
+              type="button"
+              onClick={
+                handleOpenRealtorApplication
+              }
+              className="flex min-h-[42px] w-full items-center rounded-xl px-3 text-left text-[13px] font-medium text-[var(--sb-text-strong)] transition hover:bg-white/5"
+            >
+              Стать риелтором
+            </button>
+          )}
         </div>
 
         <button
@@ -472,6 +537,15 @@ function ProfileWorkspace(
         }
         onClose={() =>
           setEditProfileOpen(false)
+        }
+      />
+
+      <RealtorApplicationModal
+        open={
+          realtorApplicationOpen
+        }
+        onClose={() =>
+          setRealtorApplicationOpen(false)
         }
       />
     </>

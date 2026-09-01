@@ -102,6 +102,74 @@ export interface Database {
         };
       };
 
+      realtor_applications: {
+        Row: {
+          id: string;
+          user_id: string;
+
+          full_name: string;
+          phone: string;
+          agency_name: string | null;
+          social_url: string | null;
+          photo_url: string;
+
+          status:
+            | "pending"
+            | "approved"
+            | "rejected";
+
+          created_at: string;
+          updated_at: string;
+
+          reviewed_at: string | null;
+          reviewer_id: string | null;
+        };
+
+        Insert: {
+          id?: string;
+          user_id: string;
+
+          full_name: string;
+          phone: string;
+          agency_name?: string | null;
+          social_url?: string | null;
+          photo_url: string;
+
+          status?:
+            | "pending"
+            | "approved"
+            | "rejected";
+
+          created_at?: string;
+          updated_at?: string;
+
+          reviewed_at?: string | null;
+          reviewer_id?: string | null;
+        };
+
+        Update: {
+          id?: string;
+          user_id?: string;
+
+          full_name?: string;
+          phone?: string;
+          agency_name?: string | null;
+          social_url?: string | null;
+          photo_url?: string;
+
+          status?:
+            | "pending"
+            | "approved"
+            | "rejected";
+
+          created_at?: string;
+          updated_at?: string;
+
+          reviewed_at?: string | null;
+          reviewer_id?: string | null;
+        };
+      };
+
       listings: {
         Row: {
           id: string;

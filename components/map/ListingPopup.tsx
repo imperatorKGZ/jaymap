@@ -33,6 +33,10 @@ import {
 } from "@/lib/supabase/api";
 
 import {
+  supabase,
+} from "@/lib/supabase/client";
+
+import {
   useAuth,
 } from "@/lib/auth/AuthProvider";
 
@@ -142,6 +146,11 @@ export default function ListingPopup({
   ] = useState(false);
 
   const [
+    isRealtor,
+    setIsRealtor,
+  ] = useState(false);
+
+  const [
     isVisible,
     setIsVisible,
   ] = useState(false);
@@ -244,6 +253,58 @@ export default function ListingPopup({
     };
   }, [
     user,
+    listing.id,
+  ]);
+
+  /*
+   * Public realtor status.
+   *
+   * RPC возвращает только true/false:
+   * активное объявление принадлежит
+   * профилю с role = "realtor" или нет.
+   */
+  useEffect(() => {
+    let cancelled = false;
+
+    setIsRealtor(false);
+
+    supabase
+      .rpc(
+        "get_public_listing_realtor_status",
+        {
+          p_listing_id:
+            listing.id,
+        }
+      )
+      .then(({ data, error }) => {
+        if (
+          cancelled
+        ) {
+          return;
+        }
+
+        if (error) {
+          console.error(
+            "[ListingPopup] Realtor status load failed:",
+            error
+          );
+
+          setIsRealtor(
+            false
+          );
+
+          return;
+        }
+
+        setIsRealtor(
+          data === true
+        );
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
     listing.id,
   ]);
 
@@ -786,6 +847,23 @@ export default function ListingPopup({
               onTouchEnd
             }
           >
+            {isRealtor && (
+              <span
+                className="absolute right-3 top-14 z-10 inline-flex items-center rounded-full border px-3 py-1.5 text-[10px] font-semibold tracking-[0.02em] backdrop-blur-md"
+                style={{
+                  borderColor:
+                    "rgba(213,168,75,0.36)",
+                  background:
+                    "linear-gradient(135deg, rgba(244,213,141,0.20), rgba(168,117,36,0.16))",
+                  color:
+                    "#F0D58A",
+                  boxShadow:
+                    "0 3px 14px rgba(168,117,36,0.18)",
+                }}
+              >
+                Риелтор
+              </span>
+            )}
             {photos.length >
             0 ? (
               <>
