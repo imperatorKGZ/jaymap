@@ -31,8 +31,9 @@ import {
 } from "@/lib/listings/persistence";
 
 import {
-  getMyListings,
-} from "@/lib/supabase/api";
+  getMyListingCapacity,
+  type ListingCapacity,
+} from "@/lib/supabase/listingCapacity";
 
 export type ListingCreateType =
   | "rental"
@@ -177,6 +178,24 @@ const LAND_USES = [
   },
 ];
 
+function isValidKyrgyzstanPhone(phone: string): boolean {
+  const digits = phone.replace(/\D/g, "");
+
+  if (digits.length === 12 && digits.startsWith("996")) {
+    return /^[5-9]\d{8}$/.test(
+      digits.slice(3)
+    );
+  }
+
+  if (digits.length === 9) {
+    return /^[5-9]\d{8}$/.test(
+      digits
+    );
+  }
+
+  return false;
+}
+
 function createInitialForm(phone = ""): ListingForm {
   return {
     title: "",
@@ -288,6 +307,13 @@ export default function ListingCreateModal({
     setListingLimitReached,
   ] = useState(false);
 
+  const [
+    listingCapacity,
+    setListingCapacity,
+  ] = useState<ListingCapacity | null>(
+    null
+  );
+
   useEffect(() => {
     if (!open) {
       return;
@@ -312,6 +338,7 @@ export default function ListingCreateModal({
 
     setListingLimitChecking(true);
     setListingLimitReached(false);
+    setListingCapacity(null);
 
     const previousOverflow =
       document.body.style
@@ -338,7 +365,21 @@ export default function ListingCreateModal({
       return;
     }
 
-    if (!user || profile?.role !== "user") {
+    if (!user || !profile) {
+      setListingCapacity(null);
+      setListingLimitReached(false);
+      setListingLimitChecking(false);
+
+      return;
+    }
+
+    /*
+     * Администратор не ограничен количеством объявлений.
+     * Для user/realtor источник истины — защищённый RPC
+     * get_my_listing_capacity().
+     */
+    if (profile.role === "admin") {
+      setListingCapacity(null);
       setListingLimitReached(false);
       setListingLimitChecking(false);
 
@@ -347,43 +388,45 @@ export default function ListingCreateModal({
 
     let cancelled = false;
 
-    const checkListingLimit =
-      async () => {
-        try {
-          const listings =
-            await getMyListings();
+    const checkListingLimit = async () => {
+      try {
+        const capacity =
+          await getMyListingCapacity();
 
-          if (cancelled) {
-            return;
-          }
-
-          const publishedCount =
-            listings.filter(
-              (listing) =>
-                listing.status ===
-                "published"
-            ).length;
-
-          setListingLimitReached(
-            publishedCount >= 3
-          );
-        } catch (error) {
-          if (!cancelled) {
-            console.error(
-              "[ListingCreateModal] Listing limit check failed:",
-              error
-            );
-
-            // Серверная проверка всё равно остаётся источником истины.
-            // При ошибке проверки не блокируем форму заранее.
-            setListingLimitReached(false);
-          }
-        } finally {
-          if (!cancelled) {
-            setListingLimitChecking(false);
-          }
+        if (cancelled) {
+          return;
         }
-      };
+
+        setListingCapacity(
+          capacity
+        );
+
+        setListingLimitReached(
+          capacity.total_limit !== null &&
+          capacity.published_count >=
+            capacity.total_limit
+        );
+      } catch (error) {
+        if (!cancelled) {
+          console.error(
+            "[ListingCreateModal] Listing capacity check failed:",
+            error
+          );
+
+          /*
+           * Серверный trigger всё равно остаётся источником истины.
+           * Если информационный RPC временно недоступен, форму заранее
+           * не блокируем.
+           */
+          setListingCapacity(null);
+          setListingLimitReached(false);
+        }
+      } finally {
+        if (!cancelled) {
+          setListingLimitChecking(false);
+        }
+      }
+    };
 
     void checkListingLimit();
 
@@ -393,7 +436,7 @@ export default function ListingCreateModal({
   }, [
     open,
     profileLoading,
-    profile?.role,
+    profile,
     user,
   ]);
 
@@ -758,6 +801,14 @@ export default function ListingCreateModal({
       if (!form.phone.trim()) {
         setError(
           "Укажите телефон для связи."
+        );
+
+        return;
+      }
+
+      if (!isValidKyrgyzstanPhone(form.phone)) {
+        setError(
+          "Укажите корректный номер Кыргызстана."
         );
 
         return;
@@ -1167,9 +1218,21 @@ export default function ListingCreateModal({
             "Обычный пользователь может иметь не более 3 опубликованных объявлений."
           )
         ) {
-          setError(
-            "Вы достигли лимита объявлений. Чтобы разместить новое объявление, удалите или приостановите одно из уже опубликованных."
+          setListingLimitReached(
+            true
           );
+
+          setError(null);
+        } else if (
+          errorMessage.includes(
+            "Лимит объявлений риелтора исчерпан"
+          )
+        ) {
+          setListingLimitReached(
+            true
+          );
+
+          setError(null);
         } else {
           setError(
             errorMessage
@@ -1538,18 +1601,38 @@ export default function ListingCreateModal({
                 borderRadius:
                   "18px",
                 border:
-                  "1px solid rgba(255,90,90,0.22)",
+                  profile?.role ===
+                  "realtor"
+                    ? "1px solid rgba(213,168,75,0.32)"
+                    : "1px solid rgba(255,90,90,0.22)",
                 background:
-                  "rgba(255,90,90,0.08)",
+                  profile?.role ===
+                  "realtor"
+                    ? "linear-gradient(135deg, rgba(244,213,141,0.14), rgba(168,117,36,0.08))"
+                    : "rgba(255,90,90,0.08)",
                 color:
-                  "#ff9d9d",
+                  profile?.role ===
+                  "realtor"
+                    ? "#E8C871"
+                    : "#ff9d9d",
                 fontSize:
-                  "25px",
+                  profile?.role ===
+                  "realtor"
+                    ? "21px"
+                    : "25px",
                 fontWeight:
                   700,
+                boxShadow:
+                  profile?.role ===
+                  "realtor"
+                    ? "0 6px 24px rgba(168,117,36,0.10)"
+                    : "none",
               }}
             >
-              !
+              {profile?.role ===
+              "realtor"
+                ? "10"
+                : "!"}
             </div>
 
             <h3
@@ -1569,78 +1652,199 @@ export default function ListingCreateModal({
               Вы достигли лимита
             </h3>
 
-            <p
-              style={{
-                margin:
-                  "10px 0 0",
-                maxWidth:
-                  "390px",
-                fontSize:
-                  "13px",
-                lineHeight:
-                  "1.6",
-                color:
-                  "rgba(255,255,255,0.5)",
-              }}
-            >
-              Обычный пользователь может одновременно иметь не более 3 опубликованных объявлений.
-            </p>
+            {profile?.role === "realtor" ? (
+              <>
+                <p
+                  style={{
+                    margin:
+                      "10px 0 0",
+                    maxWidth:
+                      "390px",
+                    fontSize:
+                      "13px",
+                    lineHeight:
+                      "1.6",
+                    color:
+                      "rgba(255,255,255,0.5)",
+                  }}
+                >
+                  Вы используете {listingCapacity?.published_count ?? 0} из {listingCapacity?.total_limit ?? 10} доступных объявлений.
+                </p>
 
-            <div
-              style={{
-                marginTop:
-                  "12px",
-                maxWidth:
-                  "390px",
-                padding:
-                  "12px 14px",
-                border:
-                  "1px solid rgba(255,255,255,0.08)",
-                borderRadius:
-                  "12px",
-                background:
-                  "rgba(255,255,255,0.03)",
-                color:
-                  "rgba(255,255,255,0.42)",
-                fontSize:
-                  "11px",
-                lineHeight:
-                  "1.55",
-              }}
-            >
-              Чтобы разместить новое объявление, удалите или приостановите одно из уже опубликованных.
-            </div>
+                <div
+                  style={{
+                    marginTop:
+                      "12px",
+                    maxWidth:
+                      "390px",
+                    padding:
+                      "12px 14px",
+                    border:
+                      "1px solid rgba(213,168,75,0.18)",
+                    borderRadius:
+                      "12px",
+                    background:
+                      "linear-gradient(135deg, rgba(244,213,141,0.07), rgba(168,117,36,0.04))",
+                    color:
+                      "rgba(255,255,255,0.55)",
+                    fontSize:
+                      "11px",
+                    lineHeight:
+                      "1.55",
+                  }}
+                >
+                  Можно подключить ещё 10 объявлений за 300 сом в месяц.
+                </div>
 
-            <button
-              type="button"
-              onClick={onClose}
-              style={{
-                marginTop:
-                  "24px",
-                minWidth:
-                  "130px",
-                height:
-                  "42px",
-                padding:
-                  "0 18px",
-                border:
-                  "1px solid rgba(255,255,255,0.10)",
-                borderRadius:
-                  "999px",
-                background:
-                  "rgba(255,255,255,0.05)",
-                color:
-                  "rgba(255,255,255,0.75)",
-                fontSize:
-                  "12px",
-                fontWeight:
-                  600,
-                cursor:
-                  "pointer",
-              }}
-            >
-              Понятно
-            </button>
+                <div
+                  style={{
+                    display:
+                      "flex",
+                    gap:
+                      "10px",
+                    marginTop:
+                      "24px",
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    style={{
+                      minWidth:
+                        "120px",
+                      height:
+                        "42px",
+                      padding:
+                        "0 18px",
+                      border:
+                        "1px solid rgba(255,255,255,0.10)",
+                      borderRadius:
+                        "999px",
+                      background:
+                        "rgba(255,255,255,0.05)",
+                      color:
+                        "rgba(255,255,255,0.75)",
+                      fontSize:
+                        "12px",
+                      fontWeight:
+                        600,
+                      cursor:
+                        "pointer",
+                    }}
+                  >
+                    Понятно
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setError(
+                        "Оплата дополнительных объявлений пока не подключена."
+                      )
+                    }
+                    style={{
+                      minWidth:
+                        "165px",
+                      height:
+                        "42px",
+                      padding:
+                        "0 18px",
+                      border:
+                        "1px solid rgba(213,168,75,0.30)",
+                      borderRadius:
+                        "999px",
+                      background:
+                        "linear-gradient(135deg, rgba(244,213,141,0.18), rgba(168,117,36,0.12))",
+                      color:
+                        "#E8C871",
+                      fontSize:
+                        "12px",
+                      fontWeight:
+                        650,
+                      cursor:
+                        "pointer",
+                    }}
+                  >
+                    +10 за 300 сом
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p
+                  style={{
+                    margin:
+                      "10px 0 0",
+                    maxWidth:
+                      "390px",
+                    fontSize:
+                      "13px",
+                    lineHeight:
+                      "1.6",
+                    color:
+                      "rgba(255,255,255,0.5)",
+                  }}
+                >
+                  Обычный пользователь может одновременно иметь не более 3 опубликованных объявлений.
+                </p>
+
+                <div
+                  style={{
+                    marginTop:
+                      "12px",
+                    maxWidth:
+                      "390px",
+                    padding:
+                      "12px 14px",
+                    border:
+                      "1px solid rgba(255,255,255,0.08)",
+                    borderRadius:
+                      "12px",
+                    background:
+                      "rgba(255,255,255,0.03)",
+                    color:
+                      "rgba(255,255,255,0.42)",
+                    fontSize:
+                      "11px",
+                    lineHeight:
+                      "1.55",
+                  }}
+                >
+                  Чтобы разместить новое объявление, удалите или приостановите одно из уже опубликованных.
+                </div>
+
+                <button
+                  type="button"
+                  onClick={onClose}
+                  style={{
+                    marginTop:
+                      "24px",
+                    minWidth:
+                      "130px",
+                    height:
+                      "42px",
+                    padding:
+                      "0 18px",
+                    border:
+                      "1px solid rgba(255,255,255,0.10)",
+                    borderRadius:
+                      "999px",
+                    background:
+                      "rgba(255,255,255,0.05)",
+                    color:
+                      "rgba(255,255,255,0.75)",
+                    fontSize:
+                      "12px",
+                    fontWeight:
+                      600,
+                    cursor:
+                      "pointer",
+                  }}
+                >
+                  Понятно
+                </button>
+              </>
+            )}
           </div>
         ) : (
           <>

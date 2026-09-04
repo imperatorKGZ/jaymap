@@ -122,8 +122,9 @@ export default function Navbar({
    * ---------------------------------------------------------
    */
 
-  const PROFILE_LEFT = 780;
+  const PROFILE_LEFT = 770;
   const PROFILE_TOP = 34;
+  const PROFILE_WIDTH = 90;
 
   /*
    * ---------------------------------------------------------
@@ -131,8 +132,9 @@ export default function Navbar({
    * ---------------------------------------------------------
    */
 
-  const PUBLISH_LEFT = 870;
+  const PUBLISH_LEFT = 865;
   const PUBLISH_TOP = 34;
+  const PUBLISH_WIDTH = 115;
 
   /*
    * ---------------------------------------------------------
@@ -140,7 +142,7 @@ export default function Navbar({
    * ---------------------------------------------------------
    */
 
-  const USERNAME_MAX_WIDTH = 120;
+  const USERNAME_MAX_WIDTH = 70;
 
   const {
     t,
@@ -418,6 +420,15 @@ export default function Navbar({
     t(
       "navbar.profile"
     );
+
+  const getVisibleUserName = (
+    name: string,
+    maxChars: number
+  ) => {
+    return Array.from(name)
+      .slice(0, maxChars)
+      .join("");
+  };
 
   /*
    * Пользовательская фотография берётся только
@@ -744,6 +755,9 @@ export default function Navbar({
               top:
                 `${PROFILE_TOP}px`,
 
+              width:
+                `${PROFILE_WIDTH}px`,
+
               transform:
                 "translateY(-50%)",
             }}
@@ -771,8 +785,11 @@ export default function Navbar({
                 className="
                   m-0
                   flex
+                  w-full
+                  min-w-0
                   items-center
-                  gap-2
+                  gap-1
+                  overflow-hidden
                   rounded-full
                   border-0
                   bg-transparent
@@ -824,14 +841,27 @@ export default function Navbar({
 
                 <span
                   className="
-                    max-w-[120px]
-                    truncate
+                    block
+                    min-w-0
+                    shrink-0
+                    overflow-hidden
+                    whitespace-nowrap
+                    text-left
                     text-[13px]
                     font-medium
                     leading-none
                   "
+                  style={{
+                    width:
+                      `${USERNAME_MAX_WIDTH}px`,
+                    flex:
+                      `0 0 ${USERNAME_MAX_WIDTH}px`,
+                  }}
+                  title={
+                    userName
+                  }
                 >
-                  {userName}
+                  {getVisibleUserName(userName, 7)}
                 </span>
               </button>
             ) : (
@@ -842,6 +872,12 @@ export default function Navbar({
                 }
                 className="
                   m-0
+                  flex
+                  h-9
+                  w-full
+                  items-center
+                  justify-center
+                  whitespace-nowrap
                   border-0
                   bg-transparent
                   p-0
@@ -876,6 +912,9 @@ export default function Navbar({
               top:
                 `${PUBLISH_TOP}px`,
 
+              width:
+                `${PUBLISH_WIDTH}px`,
+
               transform:
                 "translateY(-50%)",
             }}
@@ -887,10 +926,16 @@ export default function Navbar({
               }
               className="
                 m-0
+                flex
+                h-9
+                w-full
+                items-center
+                justify-center
+                whitespace-nowrap
                 rounded-full
                 border-0
                 bg-emerald-600
-                px-3
+                px-2
                 py-2
                 text-sm
                 font-semibold

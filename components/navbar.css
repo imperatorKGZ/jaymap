@@ -69,3 +69,18 @@
   display: block;
   flex-shrink: 0;
 }
+
+/* Стабильная геометрия Navbar:
+   размеры правых зон задаются в Navbar.tsx,
+   эти правила не меняют текущие координаты. */
+
+.jaymap-navbar button {
+  box-sizing: border-box;
+}
+
+.jaymap-navbar .jaymap-navbar-search-text {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

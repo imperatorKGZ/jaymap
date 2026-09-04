@@ -46,6 +46,7 @@ export default function RealtorApplicationModal({
   const {
     user,
     profile,
+    refreshProfile,
   } = useAuth();
 
   const [
@@ -385,13 +386,55 @@ export default function RealtorApplicationModal({
         return;
       }
 
-      if (
-        !/^https?:\/\//i.test(
-          trimmedSocialUrl
-        )
-      ) {
+      let normalizedInstagramUrl = "";
+
+      try {
+        const parsedInstagramUrl =
+          new URL(trimmedSocialUrl);
+
+        const hostname =
+          parsedInstagramUrl.hostname
+            .toLowerCase()
+            .replace(/^www\./, "");
+
+        const pathname =
+          parsedInstagramUrl.pathname
+            .replace(/^\/+|\/+$/g, "");
+
+        const pathParts = pathname.split("/");
+
+        const username =
+          pathParts.length === 1
+            ? pathParts[0]
+            : "";
+
+        const isValidUsername =
+          /^[a-zA-Z0-9._]{1,30}$/.test(
+            username
+          ) &&
+          !username.startsWith(".") &&
+          !username.endsWith(".") &&
+          !username.includes("..");
+
+        if (
+          parsedInstagramUrl.protocol !==
+            "https:" ||
+          hostname !== "instagram.com" ||
+          !username ||
+          !isValidUsername ||
+          parsedInstagramUrl.search ||
+          parsedInstagramUrl.hash
+        ) {
+          throw new Error(
+            "invalid_instagram_url"
+          );
+        }
+
+        normalizedInstagramUrl =
+          `https://instagram.com/${username}`;
+      } catch {
         setError(
-          "Ссылка на соцсеть должна начинаться с http:// или https://."
+          "Укажите корректную ссылку на профиль Instagram, например https://instagram.com/username."
         );
 
         return;
@@ -544,6 +587,49 @@ export default function RealtorApplicationModal({
 
           applicationPhotoUrl =
             publicUrlData.publicUrl;
+
+          /*
+           * Фото заявки одновременно становится
+           * текущим аватаром профиля.
+           *
+           * Тогда после отправки заявки одно и то же
+           * фото сразу используется Navbar, профилем
+           * и другими местами, которые читают
+           * profiles.avatar_url.
+           */
+          const {
+            error:
+              profileAvatarUpdateError,
+          } =
+            await supabase
+              .from("profiles")
+              .update({
+                avatar_url:
+                  applicationPhotoUrl,
+
+                updated_at:
+                  new Date().toISOString(),
+              })
+              .eq(
+                "id",
+                user.id
+              );
+
+          if (
+            profileAvatarUpdateError
+          ) {
+            if (
+              uploadedStoragePath
+            ) {
+              await supabase.storage
+                .from("avatars")
+                .remove([
+                  uploadedStoragePath,
+                ]);
+            }
+
+            throw profileAvatarUpdateError;
+          }
         }
 
         const {
@@ -569,7 +655,7 @@ export default function RealtorApplicationModal({
                 null,
 
               social_url:
-                trimmedSocialUrl,
+                normalizedInstagramUrl,
 
               photo_url:
                 applicationPhotoUrl,
@@ -604,6 +690,8 @@ export default function RealtorApplicationModal({
 
           throw insertError;
         }
+
+        await refreshProfile();
 
         setSuccess(
           true
@@ -1378,7 +1466,7 @@ export default function RealtorApplicationModal({
                     "0.08em",
                 }}
               >
-                Ссылка на соцсеть
+                Instagram
               </label>
 
               <input
@@ -1401,7 +1489,7 @@ export default function RealtorApplicationModal({
                 disabled={
                   loading
                 }
-                placeholder="https://..."
+                placeholder="https://instagram.com/username"
                 style={{
                   width:
                     "100%",
