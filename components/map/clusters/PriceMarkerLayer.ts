@@ -3,6 +3,7 @@ import { JAYMAP_TURQUOISE } from "./clusterStyle";
 
 export const PRICE_PILL_IMAGE_ID = "jm-price-pill";
 export const PRICE_MARKER_LAYER_ID = "jaymap-price-marker";
+export const PRICE_MARKER_HOVER_LAYER_ID = "jaymap-price-marker-hover";
 
 function hexToRgb(hex: string): [number, number, number] {
   const clean = hex.replace("#", "");
@@ -144,6 +145,39 @@ export function addPriceMarkerLayer(
       "text-opacity-transition": { duration: 250 },
     },
   });
+
+  // Hover glow — отдельный слой, чтобы не переделывать сам ценник
+  // и не пересчитывать весь основной symbol-layer на каждый hover.
+  if (!map.getLayer(PRICE_MARKER_HOVER_LAYER_ID)) {
+    map.addLayer({
+      id: PRICE_MARKER_HOVER_LAYER_ID,
+      type: "symbol",
+      source: sourceId,
+      minzoom: minZoom,
+      filter: [
+        "all",
+        ["!", ["has", "point_count"]],
+        ["==", ["get", "id"], "__jaymap_no_hover__"],
+      ],
+      layout: {
+        "icon-image": PRICE_PILL_IMAGE_ID,
+        "icon-text-fit": "both",
+        "icon-text-fit-padding": [4, 10, 4, 10],
+        "icon-allow-overlap": true,
+        "icon-ignore-placement": true,
+        "icon-padding": 4,
+        "icon-size": 1.08,
+        "text-field": ["get", "priceLabel"],
+        "text-font": ["Noto Sans Bold"],
+        "text-size": 12.45,
+        "text-allow-overlap": true,
+        "text-ignore-placement": true,
+      },
+      paint: {
+        "icon-opacity": 0.38,
+      },
+    });
+  }
 
   return layerId;
 }

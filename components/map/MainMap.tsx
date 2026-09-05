@@ -58,6 +58,15 @@ interface MainMapProps {
   selectedCity?: City | null;
 
   /**
+   * Текущий zoom карты.
+   * MainMap передаёт его наружу для
+   * контекстной навигации над картой.
+   */
+  onZoomChange?: (
+    zoom: number
+  ) => void;
+
+  /**
    * Последние успешно применённые фильтры Sidebar.
    *
    * Bounds сюда не передаются.
@@ -352,6 +361,7 @@ function getResponsiveCountryZoom():
 
 export default function MainMap({
   selectedCity = null,
+  onZoomChange,
   filters,
   onListingSelect,
   focusedListing = null,
@@ -504,11 +514,19 @@ export default function MainMap({
       | undefined
     >(undefined);
 
+  const onZoomChangeRef =
+    useRef<
+      ((zoom: number) => void) | undefined
+    >(undefined);
+
   onLocateMeReadyRef.current =
     onLocateMeReady;
 
   onLocationChangeRef.current =
     onLocationChange;
+
+  onZoomChangeRef.current =
+    onZoomChange;
 
   filtersRef.current =
     filters;
@@ -832,6 +850,10 @@ export default function MainMap({
         map.on(
           "zoomend",
           () => {
+            onZoomChangeRef.current?.(
+              map.getZoom()
+            );
+
             /**
              * Если это был именно наш
              * responsive resize — не считаем

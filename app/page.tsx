@@ -8,6 +8,8 @@ import {
 
 import Navbar from "@/components/Navbar";
 
+import QuickSearch from "@/components/map/QuickSearch";
+
 import MainMap from "@/components/map/MainMap";
 
 import Sidebar from "@/components/map/sidebar/Sidebar";
@@ -24,6 +26,7 @@ import type {
 
 import type {
   ListingsFilter,
+  ListingType,
 } from "@/lib/filters/types";
 
 import type {
@@ -57,6 +60,20 @@ export default function Home() {
   ] = useState<
     ListingsFilter | undefined
   >(undefined);
+
+  const [
+    quickSearchType,
+    setQuickSearchType,
+  ] = useState<
+    ListingType | null
+  >(null);
+
+  const [
+    mapZoom,
+    setMapZoom,
+  ] = useState<
+    number
+  >(0);
 
   const [
     selectedListing,
@@ -154,6 +171,25 @@ export default function Home() {
     );
 
   /**
+   * MainMap сообщает сюда текущий zoom карты.
+   *
+   * QuickSearch использует его,
+   * чтобы показываться только в городском
+   * масштабе карты.
+   */
+  const handleMapZoomChange =
+    useCallback(
+      (
+        zoom: number
+      ) => {
+        setMapZoom(
+          zoom
+        );
+      },
+      []
+    );
+
+  /**
    * Sidebar сообщает сюда выбранный радиус.
    *
    * null  → выключить радиус
@@ -187,6 +223,45 @@ export default function Home() {
       ) => {
         setAppliedFilters(
           filters as ListingsFilter
+        );
+      },
+      []
+    );
+
+  /**
+   * Быстрый выбор основного режима поиска.
+   *
+   * Использует тот же ListingsFilter,
+   * который уже используется Sidebar → MainMap.
+   * Sidebar дополнительно открывает соответствующий workspace
+   * через существующее событие навигации.
+   */
+  const handleQuickSearchSelect =
+    useCallback(
+      (
+        type: ListingType
+      ) => {
+        setQuickSearchType(
+          type
+        );
+
+        setAppliedFilters(
+          (previous) => ({
+            ...(previous ?? {}),
+            type,
+          })
+        );
+
+        window.dispatchEvent(
+          new CustomEvent(
+            "jaymap:open-sidebar-section",
+            {
+              detail: {
+                sectionId:
+                  type,
+              },
+            }
+          )
         );
       },
       []
@@ -362,6 +437,10 @@ export default function Home() {
             selectedCity
           }
 
+          onZoomChange={
+            handleMapZoomChange
+          }
+
           filters={
             appliedFilters
           }
@@ -396,6 +475,26 @@ export default function Home() {
       <Navbar
         onCitySelect={
           setSelectedCity
+        }
+      />
+
+      {/* Контекстная навигация по основным режимам.
+          Появляется только в городском масштабе карты. */}
+      <QuickSearch
+        value={
+          quickSearchType
+        }
+
+        visible={
+          selectedCity !== null
+        }
+
+        mapZoom={
+          mapZoom
+        }
+
+        onSelect={
+          handleQuickSearchSelect
         }
       />
 

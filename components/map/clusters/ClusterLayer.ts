@@ -12,6 +12,7 @@ import {
 
 import {
   addPriceMarkerLayer,
+  PRICE_MARKER_HOVER_LAYER_ID,
 } from "./PriceMarkerLayer";
 
 import {
@@ -32,6 +33,9 @@ export const CLUSTER_SOURCE_ID =
 export const CLUSTER_BADGE_LAYER_ID =
   "jaymap-cluster-badge";
 
+export const CLUSTER_BADGE_HOVER_LAYER_ID =
+  "jaymap-cluster-badge-hover";
+
 /**
  * Невидимый слой, который занимает место
  * кластера в collision index.
@@ -47,6 +51,7 @@ export const CLUSTER_COUNT_LAYER_ID =
 
 const ALL_LAYER_IDS = [
   CLUSTER_BADGE_LAYER_ID,
+  CLUSTER_BADGE_HOVER_LAYER_ID,
   CLUSTER_COLLISION_LAYER_ID,
 ];
 
@@ -203,6 +208,99 @@ function addClusterBadgeLayer(
         duration:
           300,
       },
+    },
+  });
+}
+
+/**
+ * Отдельный hover-слой поверх обычного cluster.
+ *
+ * Сам cluster не меняет свой исходный дизайн:
+ * дополнительный слой даёт только мягкое
+ * увеличение + turquoise glow по внешнему краю.
+ */
+function addClusterBadgeHoverLayer(
+  map: maplibregl.Map,
+  minZoom: number
+): void {
+  if (
+    map.getLayer(
+      CLUSTER_BADGE_HOVER_LAYER_ID
+    )
+  ) {
+    return;
+  }
+
+  map.addLayer({
+    id:
+      CLUSTER_BADGE_HOVER_LAYER_ID,
+
+    type:
+      "symbol",
+
+    source:
+      CLUSTER_SOURCE_ID,
+
+    minzoom:
+      minZoom,
+
+    filter: [
+      "all",
+      [
+        "has",
+        "point_count",
+      ],
+      [
+        "==",
+        [
+          "get",
+          "cluster_id",
+        ],
+        "__jaymap_no_hover__",
+      ],
+    ],
+
+    layout: {
+      "icon-image":
+        clusterIconImageExpression(),
+
+      "icon-size":
+        1.08,
+
+      "icon-allow-overlap":
+        true,
+
+      "icon-ignore-placement":
+        true,
+
+      "text-field": [
+        "to-string",
+        [
+          "get",
+          "point_count",
+        ],
+      ],
+
+      "text-font": [
+        "Noto Sans Bold",
+      ],
+
+      "text-size":
+        clusterTextSizeExpression(),
+
+      "text-allow-overlap":
+        true,
+
+      "text-ignore-placement":
+        true,
+    },
+
+    paint: {
+      "icon-opacity":
+        0.38,
+
+      "text-opacity":
+        0,
     },
   });
 }
@@ -447,6 +545,14 @@ export function setupClusterLayer(
   );
 
   /*
+   * Hover halo для cluster.
+   */
+  addClusterBadgeHoverLayer(
+    map,
+    minZoom
+  );
+
+  /*
    * Невидимая collision zone.
    */
   addClusterCollisionLayer(
@@ -474,6 +580,65 @@ export function setupClusterLayer(
   positionClusterCollisionLayer(
     map
   );
+
+  const resetClusterHover =
+    () => {
+      if (
+        map.getLayer(
+          CLUSTER_BADGE_HOVER_LAYER_ID
+        )
+      ) {
+        map.setFilter(
+          CLUSTER_BADGE_HOVER_LAYER_ID,
+          [
+            "all",
+            [
+              "has",
+              "point_count",
+            ],
+            [
+              "==",
+              [
+                "get",
+                "cluster_id",
+              ],
+              "__jaymap_no_hover__",
+            ],
+          ]
+        );
+      }
+    };
+
+  const resetPriceHover =
+    () => {
+      if (
+        map.getLayer(
+          PRICE_MARKER_HOVER_LAYER_ID
+        )
+      ) {
+        map.setFilter(
+          PRICE_MARKER_HOVER_LAYER_ID,
+          [
+            "all",
+            [
+              "!",
+              [
+                "has",
+                "point_count",
+              ],
+            ],
+            [
+              "==",
+              [
+                "get",
+                "id",
+              ],
+              "__jaymap_no_hover__",
+            ],
+          ]
+        );
+      }
+    };
 
   const recompute =
     () => {
@@ -518,6 +683,14 @@ export function setupClusterLayer(
         features:
           clusters as GeoJSON.Feature[],
       });
+
+      /*
+       * После viewport/zoom change
+       * старый hover больше не должен
+       * оставаться визуально активным.
+       */
+      resetClusterHover();
+      resetPriceHover();
     };
 
   const onClusterClick =
@@ -564,15 +737,115 @@ export function setupClusterLayer(
       );
     };
 
-  const onEnter =
-    () => {
+  const onClusterEnter =
+    (
+      e: maplibregl.MapLayerMouseEvent & {
+        features?: maplibregl.MapGeoJSONFeature[];
+      }
+    ) => {
+      const feature =
+        e.features?.[0];
+
+      if (!feature) {
+        return;
+      }
+
+      const clusterId =
+        feature.properties
+          ?.cluster_id;
+
+      if (
+        clusterId == null
+      ) {
+        return;
+      }
+
+      map.setFilter(
+        CLUSTER_BADGE_HOVER_LAYER_ID,
+        [
+          "all",
+          [
+            "has",
+            "point_count",
+          ],
+          [
+            "==",
+            [
+              "get",
+              "cluster_id",
+            ],
+            clusterId,
+          ],
+        ]
+      );
+
       map.getCanvas()
         .style.cursor =
         "pointer";
     };
 
-  const onLeave =
+  const onClusterLeave =
     () => {
+      resetClusterHover();
+
+      map.getCanvas()
+        .style.cursor =
+        "";
+    };
+
+  const onPriceEnter =
+    (
+      e: maplibregl.MapLayerMouseEvent & {
+        features?: maplibregl.MapGeoJSONFeature[];
+      }
+    ) => {
+      const feature =
+        e.features?.[0];
+
+      if (!feature) {
+        return;
+      }
+
+      const listingId =
+        feature.properties?.id;
+
+      if (
+        listingId == null
+      ) {
+        return;
+      }
+
+      map.setFilter(
+        PRICE_MARKER_HOVER_LAYER_ID,
+        [
+          "all",
+          [
+            "!",
+            [
+              "has",
+              "point_count",
+            ],
+          ],
+          [
+            "==",
+            [
+              "get",
+              "id",
+            ],
+            listingId,
+          ],
+        ]
+      );
+
+      map.getCanvas()
+        .style.cursor =
+        "pointer";
+    };
+
+  const onPriceLeave =
+    () => {
+      resetPriceHover();
+
       map.getCanvas()
         .style.cursor =
         "";
@@ -597,13 +870,25 @@ export function setupClusterLayer(
   map.on(
     "mouseenter",
     CLUSTER_BADGE_LAYER_ID,
-    onEnter
+    onClusterEnter
   );
 
   map.on(
     "mouseleave",
     CLUSTER_BADGE_LAYER_ID,
-    onLeave
+    onClusterLeave
+  );
+
+  map.on(
+    "mouseenter",
+    "jaymap-price-marker",
+    onPriceEnter
+  );
+
+  map.on(
+    "mouseleave",
+    "jaymap-price-marker",
+    onPriceLeave
   );
 
   /*
@@ -651,13 +936,25 @@ export function setupClusterLayer(
         map.off(
           "mouseenter",
           CLUSTER_BADGE_LAYER_ID,
-          onEnter
+          onClusterEnter
         );
 
         map.off(
           "mouseleave",
           CLUSTER_BADGE_LAYER_ID,
-          onLeave
+          onClusterLeave
+        );
+
+        map.off(
+          "mouseenter",
+          "jaymap-price-marker",
+          onPriceEnter
+        );
+
+        map.off(
+          "mouseleave",
+          "jaymap-price-marker",
+          onPriceLeave
         );
 
         ALL_LAYER_IDS.forEach(
@@ -683,6 +980,16 @@ export function setupClusterLayer(
         ) {
           map.removeLayer(
             "jaymap-price-marker"
+          );
+        }
+
+        if (
+          map.getLayer(
+            PRICE_MARKER_HOVER_LAYER_ID
+          )
+        ) {
+          map.removeLayer(
+            PRICE_MARKER_HOVER_LAYER_ID
           );
         }
 

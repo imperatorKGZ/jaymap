@@ -204,6 +204,7 @@ export default function Sidebar({
   const {
     collapsed,
     toggleCollapsed,
+    setCollapsed,
 
     activeMainId,
     openMain,
@@ -261,6 +262,42 @@ export default function Sidebar({
           false
         );
 
+        /**
+         * Повторное нажатие на уже активную категорию
+         * закрывает Sidebar.
+         *
+         * Desktop:
+         *   сворачиваем panel через collapsed.
+         *
+         * Tablet/mobile:
+         *   закрываем overlay через mobileOpen.
+         *
+         * При этом activeMainId сбрасывается через closeMain().
+         */
+        if (
+          activeMainId === id
+        ) {
+          closeMain();
+
+          if (
+            isOverlayMode
+          ) {
+            setMobileOpen(
+              false
+            );
+          } else {
+            setCollapsed(
+              true
+            );
+          }
+
+          return;
+        }
+
+        /**
+         * Нажатие на другую категорию:
+         * открываем существующий workspace.
+         */
         openMain(id);
 
         if (
@@ -272,11 +309,56 @@ export default function Sidebar({
         }
       },
       [
+        activeMainId,
+        closeMain,
         openMain,
         isOverlayMode,
         setMobileOpen,
+        setCollapsed,
       ]
     );
+
+  useEffect(() => {
+    const handleOpenSidebarSection = (
+      event: Event
+    ) => {
+      const customEvent =
+        event as CustomEvent<{
+          sectionId?: string;
+        }>;
+
+      const sectionId =
+        customEvent.detail?.sectionId;
+
+      if (!sectionId) {
+        return;
+      }
+
+      const isMainSection =
+        mainSections.some(
+          (section) =>
+            section.id === sectionId
+        );
+
+      if (!isMainSection) {
+        return;
+      }
+
+      handleSelectMain(sectionId);
+    };
+
+    window.addEventListener(
+      "jaymap:open-sidebar-section",
+      handleOpenSidebarSection
+    );
+
+    return () => {
+      window.removeEventListener(
+        "jaymap:open-sidebar-section",
+        handleOpenSidebarSection
+      );
+    };
+  }, [handleSelectMain]);
 
   const handleSelectSecondary =
     useCallback(
