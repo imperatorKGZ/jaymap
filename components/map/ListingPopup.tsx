@@ -89,6 +89,9 @@ interface ListingContacts {
 const FAVORITE_EVENT =
   "jaymap:favorite-changed";
 
+const FAVORITE_HINT_STORAGE_KEY =
+  "jaymap:listing-favorite-hint-seen";
+
 export default function ListingPopup({
   listing,
   onClose,
@@ -143,6 +146,16 @@ export default function ListingPopup({
   const [
     favoriteLoading,
     setFavoriteLoading,
+  ] = useState(false);
+
+  const [
+    favoriteStateKnown,
+    setFavoriteStateKnown,
+  ] = useState(false);
+
+  const [
+    favoriteHintVisible,
+    setFavoriteHintVisible,
   ] = useState(false);
 
   const [
@@ -202,8 +215,16 @@ export default function ListingPopup({
         false
       );
 
+      setFavoriteStateKnown(
+        true
+      );
+
       return;
     }
+
+    setFavoriteStateKnown(
+      false
+    );
 
     let cancelled =
       false;
@@ -223,6 +244,10 @@ export default function ListingPopup({
             favoriteIds.includes(
               listing.id
             )
+          );
+
+          setFavoriteStateKnown(
+            true
           );
         }
       )
@@ -244,6 +269,10 @@ export default function ListingPopup({
           setIsFavorite(
             false
           );
+
+          setFavoriteStateKnown(
+            true
+          );
         }
       );
 
@@ -254,6 +283,78 @@ export default function ListingPopup({
   }, [
     user,
     listing.id,
+  ]);
+
+  /*
+   * One-time contextual hint for Favorite.
+   *
+   * Показываем только после того, как актуальное
+   * состояние избранного известно и только если
+   * объявление ещё не сохранено.
+   */
+  useEffect(() => {
+    if (
+      !isVisible ||
+      !favoriteStateKnown ||
+      isFavorite
+    ) {
+      return;
+    }
+
+    try {
+      const alreadySeen =
+        window.localStorage.getItem(
+          FAVORITE_HINT_STORAGE_KEY
+        ) === "1";
+
+      if (alreadySeen) {
+        return;
+      }
+
+      window.localStorage.setItem(
+        FAVORITE_HINT_STORAGE_KEY,
+        "1"
+      );
+    } catch {
+      /* localStorage недоступен — просто продолжаем без фиксации */
+    }
+
+    const showTimer =
+      setTimeout(() => {
+        setFavoriteHintVisible(
+          true
+        );
+      }, 500);
+
+    const hideTimer =
+      setTimeout(() => {
+        setFavoriteHintVisible(
+          false
+        );
+
+        try {
+          window.localStorage.setItem(
+            FAVORITE_HINT_STORAGE_KEY,
+            "1"
+          );
+        } catch {
+          /* localStorage недоступен */
+        }
+      }, 7000);
+
+    return () => {
+      clearTimeout(
+        showTimer
+      );
+
+      clearTimeout(
+        hideTimer
+      );
+    };
+  }, [
+    isVisible,
+    favoriteStateKnown,
+    isFavorite,
   ]);
 
   /*
@@ -708,6 +809,10 @@ export default function ListingPopup({
           nextState
         );
 
+        setFavoriteHintVisible(
+          false
+        );
+
         /*
          * Сообщаем FavoritesWorkspace,
          * что список изменился.
@@ -773,44 +878,75 @@ export default function ListingPopup({
         >
           {/* Top actions */}
           <div className="absolute top-3 left-3 right-3 z-10 flex justify-between pointer-events-none">
-            <button
-              type="button"
-              onClick={
-                handleFavorite
-              }
-              disabled={
-                favoriteLoading
-              }
-              className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full bg-black/40 transition hover:bg-black/60 disabled:cursor-not-allowed disabled:opacity-60"
-              style={{
-                color:
-                  isFavorite
-                    ? "#6FC9C2"
-                    : "rgba(255,255,255,0.70)",
-              }}
-              aria-label={
-                isFavorite
-                  ? t(
-                      "listingPopup.unfavorite"
-                    )
-                  : t(
-                      "listingPopup.favorite"
-                    )
-              }
-              aria-pressed={
-                isFavorite
-              }
-            >
-              <HeartOutlineIcon
-                size={18}
+            <div className="relative pointer-events-auto">
+              <button
+                type="button"
+                onClick={
+                  handleFavorite
+                }
+                disabled={
+                  favoriteLoading
+                }
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-black/40 transition hover:bg-black/60 disabled:cursor-not-allowed disabled:opacity-60"
                 style={{
                   color:
                     isFavorite
                       ? "#6FC9C2"
                       : "rgba(255,255,255,0.70)",
                 }}
-              />
-            </button>
+                aria-label={
+                  isFavorite
+                    ? t(
+                        "listingPopup.unfavorite"
+                      )
+                    : t(
+                        "listingPopup.favorite"
+                      )
+                }
+                aria-pressed={
+                  isFavorite
+                }
+              >
+                <HeartOutlineIcon
+                  size={18}
+                  style={{
+                    color:
+                      isFavorite
+                        ? "#6FC9C2"
+                        : "rgba(255,255,255,0.70)",
+                  }}
+                />
+              </button>
+
+              {favoriteHintVisible && (
+                <div
+                  role="status"
+                  className="pointer-events-none absolute left-full top-1/2 z-[30] ml-3 w-[190px] -translate-y-1/2 rounded-[14px] border border-white/10 bg-[rgba(35,42,49,0.84)] px-3 py-2.5 shadow-[0_12px_32px_rgba(0,0,0,0.20)] backdrop-blur-xl"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="absolute left-[-5px] top-1/2 h-2.5 w-2.5 -translate-y-1/2 rotate-45 border-b border-l border-white/10 bg-[rgba(35,42,49,0.84)]"
+                  />
+
+                  <span className="relative flex items-start gap-2">
+                    <span
+                      aria-hidden="true"
+                      className="mt-[5px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#6FC9C2] shadow-[0_0_8px_rgba(111,201,194,0.34)]"
+                    />
+
+                    <span className="min-w-0">
+                      <span className="block text-[12px] font-semibold leading-4 text-white/95">
+                        Сохранить объявление
+                      </span>
+
+                      <span className="mt-0.5 block text-[10.5px] leading-[15px] text-white/55">
+                        Добавьте в Избранное, чтобы не потерять
+                      </span>
+                    </span>
+                  </span>
+                </div>
+              )}
+            </div>
 
             <button
               type="button"

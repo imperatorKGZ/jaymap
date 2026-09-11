@@ -787,6 +787,9 @@ export default function Sidebar({
               onSelect={
                 handleSelectMain
               }
+               collapsed={
+                collapsed
+              }
             />
           </div>
 
