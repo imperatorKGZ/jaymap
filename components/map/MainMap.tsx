@@ -26,6 +26,12 @@ import {
 } from "./mapTools/UserLocationControl";
 
 import {
+  ensureSearchRadiusLayer,
+  updateSearchRadiusLayer,
+  removeSearchRadiusLayer,
+} from "./mapTools/SearchRadiusLayer";
+
+import {
   fetchListingsGeoJSON,
   fetchListingsGeoJSONByRadius,
 } from "@/lib/supabase/api";
@@ -647,6 +653,17 @@ export default function MainMap({
           );
 
         /**
+         * Search radius overlay.
+         *
+         * Визуальный слой создаётся один раз.
+         * Сами координаты и радиус обновляются
+         * отдельным effect ниже.
+         */
+        ensureSearchRadiusLayer(
+          map
+        );
+
+        /**
          * Click on price marker.
          */
         map.on(
@@ -892,15 +909,12 @@ export default function MainMap({
               responsiveCountryViewRef.current =
                 true;
 
-              map.easeTo({
+              map.jumpTo({
                 center:
                   COUNTRY_CENTER,
 
                 zoom:
                   countryZoom,
-
-                duration:
-                  200,
               });
             }
           }
@@ -959,6 +973,10 @@ export default function MainMap({
 
       userLocationControlRef.current =
         null;
+
+      removeSearchRadiusLayer(
+        map
+      );
 
       map.remove();
 
@@ -1123,6 +1141,41 @@ export default function MainMap({
       }
     };
   }, [
+    isLoaded,
+  ]);
+
+  /* =========================================================
+     SEARCH RADIUS VISUAL LAYER
+     ========================================================= */
+
+  useEffect(() => {
+    const map =
+      mapRef.current;
+
+    if (
+      !map ||
+      !isLoaded
+    ) {
+      return;
+    }
+
+    /**
+     * Показываем на карте ровно тот же радиус,
+     * который используется backend-поиском.
+     *
+     * null  → слой скрыт
+     * 3000  → 3 км
+     * 5000  → 5 км
+     * 10000 → 10 км
+     */
+    updateSearchRadiusLayer(
+      map,
+      userLocation,
+      searchRadius
+    );
+  }, [
+    userLocation,
+    searchRadius,
     isLoaded,
   ]);
 

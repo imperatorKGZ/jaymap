@@ -325,6 +325,12 @@ export class MapLibreShadowLayer implements CustomLayerInterface {
     const originalStencilFunc = gl.getParameter(gl.STENCIL_FUNC);
     const originalStencilRef = gl.getParameter(gl.STENCIL_REF);
     const originalStencilValueMask = gl.getParameter(gl.STENCIL_VALUE_MASK);
+    const originalStencilWriteMask = gl.getParameter(gl.STENCIL_WRITEMASK);
+    const originalStencilFail = gl.getParameter(gl.STENCIL_FAIL);
+    const originalStencilPassDepthFail = gl.getParameter(gl.STENCIL_PASS_DEPTH_FAIL);
+    const originalStencilPassDepthPass = gl.getParameter(gl.STENCIL_PASS_DEPTH_PASS);
+    const originalStencilClearValue = gl.getParameter(gl.STENCIL_CLEAR_VALUE);
+    const originalClearColor = gl.getParameter(gl.COLOR_CLEAR_VALUE);
     
     // --- НАЧАЛО РЕНДЕР-ПАССОВ ---
     
@@ -469,6 +475,15 @@ export class MapLibreShadowLayer implements CustomLayerInterface {
     gl.colorMask(originalColorMask[0], originalColorMask[1], originalColorMask[2], originalColorMask[3]);
     gl.blendFuncSeparate(originalBlendSrcRGB, originalBlendDstRGB, originalBlendSrcAlpha, originalBlendDstAlpha);
     gl.stencilFunc(originalStencilFunc, originalStencilRef, originalStencilValueMask);
+    gl.stencilMask(originalStencilWriteMask);
+    gl.stencilOp(originalStencilFail, originalStencilPassDepthFail, originalStencilPassDepthPass);
+    gl.clearStencil(originalStencilClearValue);
+    gl.clearColor(
+      originalClearColor[0],
+      originalClearColor[1],
+      originalClearColor[2],
+      originalClearColor[3]
+    );
   }
 
   public onRemove(map: MapLibre, gl: WebGLRenderingContext) {

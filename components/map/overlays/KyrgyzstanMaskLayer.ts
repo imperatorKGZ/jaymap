@@ -1,5 +1,5 @@
 import maplibregl from "maplibre-gl";
-import earcut, { flatten } from "earcut";
+import earcut from "earcut";
 
 export class KyrgyzstanMaskLayer implements maplibregl.CustomLayerInterface {
   public id = "kg-clipping-mask";
@@ -25,12 +25,8 @@ export class KyrgyzstanMaskLayer implements maplibregl.CustomLayerInterface {
       const coordinates = geometry.coordinates;
 
       // 2. Плоская развертка и триангуляция через Earcut
-      const flattened = flatten(coordinates);
-      const indices = earcut(
-        flattened.vertices,
-        flattened.holes,
-        flattened.dimensions
-      );
+      const flattened = earcut.flatten(coordinates);
+      const indices = earcut(flattened.vertices, flattened.holes, flattened.dimensions);
 
       // 3. Конвертация координат Lng/Lat в WebGL Clip Space (Меркатор)
       const vertices = new Float32Array(flattened.vertices.length);
@@ -94,11 +90,15 @@ export class KyrgyzstanMaskLayer implements maplibregl.CustomLayerInterface {
     }
   }
 
-  render(
-    gl: WebGLRenderingContext | WebGL2RenderingContext,
-    options: any
-  ) {
+  render(gl: WebGLRenderingContext | WebGL2RenderingContext, matrix: number[]) {
     if (!this.program || !this.vbo || !this.ibo || this.indexCount === 0) return;
+
+    const originalBlend = gl.isEnabled(gl.BLEND);
+    const originalDepthTest = gl.isEnabled(gl.DEPTH_TEST);
+    const originalBlendSrcRGB = gl.getParameter(gl.BLEND_SRC_RGB);
+    const originalBlendDstRGB = gl.getParameter(gl.BLEND_DST_RGB);
+    const originalBlendSrcAlpha = gl.getParameter(gl.BLEND_SRC_ALPHA);
+    const originalBlendDstAlpha = gl.getParameter(gl.BLEND_DST_ALPHA);
 
     gl.useProgram(this.program);
 
@@ -107,11 +107,7 @@ export class KyrgyzstanMaskLayer implements maplibregl.CustomLayerInterface {
     gl.vertexAttribPointer(this.aPosLocation, 2, gl.FLOAT, false, 0, 0);
 
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.ibo);
-    gl.uniformMatrix4fv(
-        this.uMatrixLocation,
-        false,
-        options.modelViewProjectionMatrix
-    );
+    gl.uniformMatrix4fv(this.uMatrixLocation, false, matrix);
 
     // ==========================================
     // КЛИППИНГ-МАСКА (ERASER МЕТОД)
@@ -132,6 +128,19 @@ export class KyrgyzstanMaskLayer implements maplibregl.CustomLayerInterface {
     gl.disableVertexAttribArray(this.aPosLocation);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+
+    if (originalBlend) gl.enable(gl.BLEND);
+    else gl.disable(gl.BLEND);
+
+    if (originalDepthTest) gl.enable(gl.DEPTH_TEST);
+    else gl.disable(gl.DEPTH_TEST);
+
+    gl.blendFuncSeparate(
+      originalBlendSrcRGB,
+      originalBlendDstRGB,
+      originalBlendSrcAlpha,
+      originalBlendDstAlpha
+    );
   }
 
   onRemove(map: maplibregl.Map, gl: WebGLRenderingContext | WebGL2RenderingContext) {

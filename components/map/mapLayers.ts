@@ -142,6 +142,7 @@ export async function setupMapLayers(map: maplibregl.Map, language: Language = "
       },
       "landcover-wood"
     );
+    map.moveLayer("kg-mask-layer", "kg-land-fill");
     // ----------------------------------------------------
     // ELEVATION BORDER
     // ----------------------------------------------------
